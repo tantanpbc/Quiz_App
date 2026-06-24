@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập hệ thống - Quiz System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 min-h-screen flex items-center justify-center font-sans antialiased text-slate-100 px-4">
+
+    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+        
+        <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
+
+        <div class="text-center mb-8">
+            <span class="text-4xl inline-block mb-3 animate-bounce">⚡</span>
+            <h1 class="text-xl font-black text-white tracking-wide uppercase">HỆ THỐNG TRẮC NGHIỆM</h1>
+            <p class="text-xs text-slate-400 mt-1">Vui lòng đăng nhập để tiếp tục học tập</p>
+        </div>
+
+        {% if messages %}
+            <div class="mb-4 space-y-2">
+                {% for message in messages %}
+                    <div class="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-medium flex items-center gap-2">
+                        <span>❌</span> {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{% url 'login' %}" class="space-y-5">
+            {% csrf_token %}
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tài khoản</label>
+                <div class="relative">
+                    <input type="text" name="username" required autocomplete="username"
+                           placeholder="Nhập tên đăng nhập..." 
+                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+            </div>
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mật khẩu</label>
+                <div class="relative">
+                    <input type="password" name="password" required autocomplete="current-password"
+                           placeholder="••••••••" 
+                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bạn là?</label>
+                <div class="relative">
+                    <select name="role" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition cursor-pointer appearance-none">
+                        <option value="student">👨‍🎓 Học sinh (Làm bài thi)</option>
+                        <option value="teacher">👩‍🏫 Giáo viên (Quản lý & Thống kê)</option>
+                    </select>
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl transition shadow-lg shadow-indigo-950/50 mt-2 block text-center">
+                Đăng nhập hệ thống
+            </button>
+        </form>
+
+        <div class="mt-6 pt-5 border-t border-slate-800/60 text-center">
+            <p class="text-[11px] text-slate-500">
+                💡 Mẹo kiểm thử: Sử dụng tài khoản <code class="text-indigo-400 font-mono">nguyenvana</code> mật khẩu <code class="text-indigo-400 font-mono">123456</code> để đăng nhập nhanh với vai trò Học sinh.
+            </p>
+        </div>
+
+    </div>
+
+</body>
+</html>

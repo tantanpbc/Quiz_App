@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xem lại bài thi: {{ exam.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 min-h-screen font-sans antialiased text-slate-100 pb-12">
+
+    <main class="max-w-3xl mx-auto px-4 pt-10 space-y-8">
+        
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-center gap-6 shadow-xl">
+            <div>
+                <h1 class="text-xl font-black text-white">Kết quả: {{ exam.title }}</h1>
+                <p class="text-xs text-slate-400 mt-1">Đã nộp lúc: {{ result.completed_at|date:"H:i - d/m/Y" }}</p>
+                <a href="{% url 'home' %}" class="mt-4 inline-block text-xs font-bold text-indigo-400 hover:underline">← Quay lại trang chủ</a>
+            </div>
+            <div class="text-center bg-slate-950 px-6 py-4 rounded-xl border border-slate-800 shrink-0">
+                <p class="text-xs text-slate-500 font-bold uppercase tracking-wider">Điểm số</p>
+                <p class="text-4xl font-black {% if result.score >= 5.0 %}text-emerald-400{% else %}text-rose-400{% endif %} font-mono mt-1">{{ result.score }}</p>
+                <p class="text-[11px] text-slate-400 mt-1">Đúng {{ result.correct_answers }}/{{ result.total_questions }} câu</p>
+            </div>
+        </div>
+
+        <section class="space-y-6">
+            <h3 class="text-base font-black text-white">Chi tiết đáp án từng câu hỏi:</h3>
+
+            {% for item in review_data %}
+                <div class="bg-slate-900 border {% if item.is_correct %}border-emerald-500/30{% else %}border-rose-500/30{% endif %} rounded-2xl p-6 space-y-4 shadow-sm">
+                    
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex items-start gap-3">
+                            <span class="bg-slate-800 text-slate-300 font-mono text-xs font-bold px-2.5 py-1 rounded-lg shrink-0 mt-0.5">Câu {{ forloop.counter }}</span>
+                            <p class="text-sm font-bold text-slate-200 leading-relaxed">{{ item.question_text }}</p>
+                        </div>
+                        {% if item.is_correct %}
+                            <span class="bg-emerald-500/10 text-emerald-400 text-xs px-2.5 py-1 rounded-lg font-bold border border-emerald-500/20 shrink-0">✓ Đúng</span>
+                        {% else %}
+                            <span class="bg-rose-500/10 text-rose-400 text-xs px-2.5 py-1 rounded-lg font-bold border border-rose-500/20 shrink-0">✗ Sai</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2 md:pl-11">
+                        <div class="p-3 rounded-xl border text-xs font-medium 
+                            {% if item.correct_option == 'A' %} bg-emerald-500/10 border-emerald-500/40 text-emerald-300
+                            {% elif item.student_choice == 'A' and not item.is_correct %} bg-rose-500/10 border-rose-500/40 text-rose-300
+                            {% else %} bg-slate-950 border-slate-800 text-slate-400 {% endif %}">
+                            <strong>A.</strong> {{ item.option_a }}
+                        </div>
+                        
+                        <div class="p-3 rounded-xl border text-xs font-medium 
+                            {% if item.correct_option == 'B' %} bg-emerald-500/10 border-emerald-500/40 text-emerald-300
+                            {% elif item.student_choice == 'B' and not item.is_correct %} bg-rose-500/10 border-rose-500/40 text-rose-300
+                            {% else %} bg-slate-950 border-slate-800 text-slate-400 {% endif %}">
+                            <strong>B.</strong> {{ item.option_b }}
+                        </div>
+
+                        <div class="p-3 rounded-xl border text-xs font-medium 
+                            {% if item.correct_option == 'C' %} bg-emerald-500/10 border-emerald-500/40 text-emerald-300
+                            {% elif item.student_choice == 'C' and not item.is_correct %} bg-rose-500/10 border-rose-500/40 text-rose-300
+                            {% else %} bg-slate-950 border-slate-800 text-slate-400 {% endif %}">
+                            <strong>C.</strong> {{ item.option_c }}
+                        </div>
+
+                        <div class="p-3 rounded-xl border text-xs font-medium 
+                            {% if item.correct_option == 'D' %} bg-emerald-500/10 border-emerald-500/40 text-emerald-300
+                            {% elif item.student_choice == 'D' and not item.is_correct %} bg-rose-500/10 border-rose-500/40 text-rose-300
+                            {% else %} bg-slate-950 border-slate-800 text-slate-400 {% endif %}">
+                            <strong>D.</strong> {{ item.option_d }}
+                        </div>
+                    </div>
+
+                    <div class="text-xs pt-2 pl-2 md:pl-11 border-t border-slate-800/40 flex items-center gap-4 text-slate-500">
+                        <p>Lựa chọn của bạn: <span class="font-bold {% if item.is_correct %}text-emerald-400{% else %}text-rose-400{% endif %}">{% if item.student_choice %}{{ item.student_choice }}{% else %}Bỏ trống{% endif %}</span></p>
+                        <p>Đáp án đúng: <span class="font-bold text-emerald-400">{{ item.correct_option }}</span></p>
+                    </div>
+
+                </div>
+            {% endfor %}
+        </section>
+    </main>
+
+</body>
+</html>

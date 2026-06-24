@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang chủ Học sinh - Hệ thống Trắc nghiệm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 min-h-screen font-sans antialiased text-slate-100">
+
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-50 shadow-md">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">🎓</span>
+                <div>
+                    <h1 class="text-base font-black text-white tracking-wide">QUIZ SYSTEM</h1>
+                    <p class="text-[10px] text-slate-400 font-medium">Hệ thống luyện đề trực tuyến</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="hidden sm:block text-right">
+                    <p class="text-xs text-slate-400 font-medium">Xin chào,</p>
+                    <p class="text-sm font-bold text-indigo-400">{{ request.user.username }}</p>
+                </div>
+                
+                <form method="POST" action="{% url 'logout' %}" class="inline-block">
+                    {% csrf_token %}
+                    <button type="submit" class="px-3 py-1.5 bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 rounded-xl text-xs font-bold border border-slate-700/50 transition">
+                        Đăng xuất
+                    </button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 space-y-12">
+        
+        <section class="space-y-6">
+            <div class="border-b border-slate-800 pb-3">
+                <h2 class="text-lg font-black text-white flex items-center gap-2.5">
+                    <span class="w-1.5 h-5 bg-indigo-500 rounded-full inline-block"></span>
+                    Danh sách đề thi trắc nghiệm đang mở
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">Chọn một đề thi bên dưới để bắt đầu tính giờ làm bài.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {% for exam in exams %}
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between shadow-sm hover:border-slate-700 transition group">
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="bg-indigo-500/10 text-indigo-400 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md border border-indigo-500/20">
+                                    ONLINE QUIZ
+                                </span>
+                                <span class="text-xs text-slate-500 font-mono">ID: #{{ exam.id }}</span>
+                            </div>
+                            <h3 class="text-base font-bold text-white group-hover:text-indigo-400 transition truncate">{{ exam.title }}</h3>
+                            <div class="flex items-center gap-4 text-xs text-slate-400 pt-1">
+                                <p class="flex items-center gap-1">⏱️ <span class="font-bold text-slate-300">{{ exam.duration }}</span> phút</p>
+                                <p class="flex items-center gap-1">❓ <span class="font-bold text-slate-300">{{ exam.questions.count }}</span> câu hỏi</p>
+                            </div>
+                        </div>
+
+                        <div class="pt-6 mt-4 border-t border-slate-800/60">
+                            <a href="{% url 'take_quiz' exam.id %}" class="block w-full text-center py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md shadow-indigo-600/10 transition transform active:scale-[0.98]">
+                                📝 Vào làm bài thi
+                            </a>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-sm italic">
+                        Hiện tại chưa có đề thi nào được tạo trên hệ thống.
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="space-y-6">
+            <div class="border-b border-slate-800 pb-3">
+                <h2 class="text-lg font-black text-white flex items-center gap-2.5">
+                    <span class="w-1.5 h-5 bg-emerald-500 rounded-full inline-block"></span>
+                    Lịch sử làm bài và điểm số của bạn
+                </h2>
+                <p class="text-xs text-slate-500 mt-1">Theo dõi lại các lượt thi đã hoàn thành và xem lại đáp án sai/đúng.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead>
+                            <tr class="bg-slate-900/60 border-b border-slate-800 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                                <th class="py-4 px-6">Tên đề thi đã làm</th>
+                                <th class="py-4 px-4 text-center">Số câu đúng</th>
+                                <th class="py-4 px-4 text-center">Thời gian hoàn thành</th>
+                                <th class="py-4 px-4 text-center">Điểm số</th>
+                                <th class="py-4 px-6 text-right">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800/40">
+                            {% for res in user_results %}
+                                <tr class="hover:bg-slate-800/20 transition">
+                                    <td class="py-4 px-6 font-bold text-slate-200">
+                                        📄 {{ res.exam.title }}
+                                    </td>
+                                    <td class="py-4 px-4 text-center text-slate-400 font-medium">
+                                        {{ res.correct_answers }} / {{ res.total_questions }}
+                                    </td>
+                                    <td class="py-4 px-4 text-center text-slate-500 text-xs font-mono">
+                                        {{ res.completed_at|date:"H:i - d/m/Y" }}
+                                    </td>
+                                    <td class="py-4 px-4 text-center font-black font-mono text-base {% if res.score >= 5.0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                                        {{ res.score }}
+                                    </td>
+                                    <td class="py-4 px-6 text-right">
+                                        <a href="{% url 'review_result' res.id %}" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white border border-indigo-500/20 hover:border-indigo-500 font-bold text-xs rounded-xl transition duration-150 shadow-sm">
+                                            🔍 Xem lại bài
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="py-10 text-center text-slate-600 italic text-sm">
+                                        Bạn chưa thực hiện bài thi trắc nghiệm nào trên hệ thống này.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="max-w-6xl mx-auto px-4 py-6 border-t border-slate-900 text-center text-[11px] text-slate-600">
+        &copy; 2026 Quiz System Project. All rights reserved.
+    </footer>
+
+</body>
+</html>

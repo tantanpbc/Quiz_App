@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Kết quả bài thi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-emerald-50 to-teal-100 flex items-center justify-center min-h-screen font-sans p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md text-center border border-emerald-100 transform transition hover:scale-101">
+        <span class="text-6xl">🎉</span>
+        <h2 class="text-2xl font-bold text-slate-800 mt-4">Hoàn Thành Bài Thi!</h2>
+        <p class="text-sm text-slate-500 mt-1">Hệ thống đã ghi nhận kết quả tự động</p>
+        
+        <div class="my-6 py-4 bg-slate-50 rounded-xl space-y-1">
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Số câu đúng</p>
+            <p class="text-xl font-bold text-slate-700">🎯 {{ result.correct_answers }} / {{ result.total_questions }} câu</p>
+        </div>
+
+        <div class="my-6">
+            <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider mb-1">Điểm số đạt được</p>
+            <div class="text-6xl font-extrabold text-indigo-600 tracking-tight">{{ result.score }}</div>
+        </div>
+        
+        <hr class="border-slate-100 my-6">
+        
+        <a href="{% url 'home' %}" class="block w-full py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl shadow-md transition">
+            Quay lại trang chủ
+        </a>
+    </div>
+</body>
+</html>

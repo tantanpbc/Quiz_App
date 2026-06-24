@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Làm bài thi: {{ exam.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 min-h-screen font-sans antialiased text-slate-100 pb-12">
+
+    <header class="sticky top-0 z-50 bg-slate-900/90 backdrop-blur border-b border-slate-800 px-6 py-4 shadow-lg">
+        <div class="max-w-4xl mx-auto flex justify-between items-center">
+            <div>
+                <span class="bg-indigo-500/10 text-indigo-400 text-xs px-3 py-1 rounded-full font-bold border border-indigo-500/20">
+                    📖 ĐANG LÀM BÀI
+                </span>
+                <h1 class="text-lg font-black text-white mt-1 truncate max-w-xs md:max-w-xl">{{ exam.title }}</h1>
+            </div>
+            
+            <div class="bg-slate-950 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3">
+                <span class="text-xl animate-pulse">⏳</span>
+                <div>
+                    <p class="text-[10px] text-slate-500 uppercase font-black tracking-wider">Thời gian còn lại</p>
+                    <p id="countdown-timer" class="text-xl font-mono font-black text-rose-400">--:--</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-8">
+        <form id="quiz-form" method="POST" action="{% url 'submit_quiz' exam.id %}" class="space-y-6">
+            {% csrf_token %}
+            
+            {% for q in questions %}
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm hover:border-slate-700/60 transition duration-200">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-slate-800 text-slate-300 font-mono text-xs font-bold px-2.5 py-1 rounded-lg shrink-0 mt-0.5">
+                            Câu {{ forloop.counter }}
+                        </span>
+                        <p class="text-base font-bold text-slate-100 leading-relaxed">{{ q.question_text }}</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2 md:pl-11">
+                        {% for opt in q.options %}
+                            <label class="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 hover:border-indigo-500/40 transition group">
+                                <input type="radio" name="question_{{ q.id }}" value="{{ opt.key }}" class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500 focus:ring-offset-slate-900">
+                                <span class="text-sm font-semibold text-slate-400 group-hover:text-slate-200 transition">
+                                    <strong class="text-indigo-400 mr-1">{{ opt.key }}.</strong> {{ opt.text }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
+
+            <div class="pt-4 flex justify-end">
+                <button type="submit" onclick="return confirm('Bạn có chắc chắn muốn nộp bài thi này không?')" class="px-8 py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/20 transition transform active:scale-95">
+                    🚀 Nộp bài hoàn thành
+                </button>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        // Lấy thời gian duration từ Django (tính bằng phút) và chuyển thành giây
+        let totalSeconds = parseInt("{{ exam.duration }}") * 60;
+        const timerElement = document.getElementById('countdown-timer');
+        const formElement = document.getElementById('quiz-form');
+
+        const interval = setInterval(function() {
+            let minutes = Math.floor(totalSeconds / 60);
+            let seconds = totalSeconds % 60;
+
+            // Thêm số 0 phía trước nếu số có 1 chữ số
+            minutes = minutes < 10 ? '0' + minutes : minutes;
+            seconds = seconds < 10 ? '0' + seconds : seconds;
+
+            timerElement.textContent = `${minutes}:${seconds}`;
+
+            // Chuyển sang màu đỏ cảnh báo nếu dưới 1 phút
+            if (totalSeconds <= 60) {
+                timerElement.classList.remove('text-rose-400');
+                timerElement.classList.add('text-red-500', 'animate-pulse');
+            }
+
+            // Xử lý khi hết giờ làm bài
+            if (totalSeconds <= 0) {
+                clearInterval(interval);
+                timerElement.textContent = "00:00";
+                alert("🚨 Đã hết giờ làm bài! Hệ thống sẽ tự động nộp bài của bạn ngay lập tức.");
+                
+                // Loại bỏ thuộc tính confirm trên nút nộp để tránh bị nghẽn lệnh submit tự động
+                formElement.submit();
+            }
+
+            totalSeconds--;
+        }, 1000);
+    </script>
+
+</body>
+</html>
