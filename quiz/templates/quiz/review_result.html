@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chi tiết bài làm: {{ exam.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-emerald-50 to-teal-100 min-h-screen py-10 px-4 font-sans">
+
+    <div class="max-w-2xl mx-auto">
+        <a href="{% url 'home' %}" class="inline-flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 transition mb-4 font-medium">
+            ⬅ Quay lại trang chủ
+        </a>
+
+        <div class="bg-white rounded-2xl shadow-md p-6 border border-emerald-100 text-center mb-6">
+            <h1 class="text-xl font-bold text-slate-800">{{ exam.title }}</h1>
+            <p class="text-xs text-slate-400 mt-1">Kết quả của: {{ result.student.username }}</p>
+            
+            <div class="flex gap-4 mt-4 justify-center">
+                <div class="bg-slate-50 px-4 py-2 rounded-xl text-center">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Số câu đúng</p>
+                    <p class="text-sm font-bold text-slate-700">{{ result.correct_answers }} / {{ result.total_questions }}</p>
+                </div>
+                <div class="bg-slate-50 px-4 py-2 rounded-xl text-center">
+                    <p class="text-[10px] text-slate-400 uppercase font-bold">Điểm số</p>
+                    <p class="text-sm font-black text-indigo-600">{{ result.score }} / 10</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-4">
+            {% for item in questions_review %}
+                <div class="bg-white rounded-xl p-5 shadow-sm border {% if item.is_correct %}border-emerald-200 bg-emerald-50/10{% else %}border-rose-200 bg-rose-50/10{% endif %}">
+                    <div class="flex justify-between items-start gap-4 mb-3">
+                        <p class="text-sm font-semibold text-slate-800">{{ item.question_text }}</p>
+                        {% if item.is_correct %}
+                            <span class="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded">ĐÚNG ✓</span>
+                        {% else %}
+                            <span class="text-[10px] font-bold text-rose-600 bg-rose-100 px-2 py-0.5 rounded">SAI ❌</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-2 text-xs">
+                        <div class="p-2.5 rounded-lg border {% if item.correct_option == 'A' %}bg-emerald-100 border-emerald-300 text-emerald-800 font-medium{% elif item.chosen_option == 'A' %}bg-rose-100 border-rose-300 text-rose-800{% else %}border-slate-100 text-slate-500{% endif %}">
+                            A. {{ item.option_a }} {% if item.chosen_option == 'A' %} 👤 (Bạn chọn) {% endif %}
+                        </div>
+                        <div class="p-2.5 rounded-lg border {% if item.correct_option == 'B' %}bg-emerald-100 border-emerald-300 text-emerald-800 font-medium{% elif item.chosen_option == 'B' %}bg-rose-100 border-rose-300 text-rose-800{% else %}border-slate-100 text-slate-500{% endif %}">
+                            B. {{ item.option_b }} {% if item.chosen_option == 'B' %} 👤 (Bạn chọn) {% endif %}
+                        </div>
+                        <div class="p-2.5 rounded-lg border {% if item.correct_option == 'C' %}bg-emerald-100 border-emerald-300 text-emerald-800 font-medium{% elif item.chosen_option == 'C' %}bg-rose-100 border-rose-300 text-rose-800{% else %}border-slate-100 text-slate-500{% endif %}">
+                            C. {{ item.option_c }} {% if item.chosen_option == 'C' %} 👤 (Bạn chọn) {% endif %}
+                        </div>
+                        <div class="p-2.5 rounded-lg border {% if item.correct_option == 'D' %}bg-emerald-100 border-emerald-300 text-emerald-800 font-medium{% elif item.chosen_option == 'D' %}bg-rose-100 border-rose-300 text-rose-800{% else %}border-slate-100 text-slate-500{% endif %}">
+                            D. {{ item.option_d }} {% if item.chosen_option == 'D' %} 👤 (Bạn chọn) {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+</body>
+</html>

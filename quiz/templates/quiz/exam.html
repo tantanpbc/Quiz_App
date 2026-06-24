@@ -41,14 +41,33 @@
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-2 md:pl-11">
-                        {% for opt in q.options %}
-                            <label class="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 hover:border-indigo-500/40 transition group">
-                                <input type="radio" name="question_{{ q.id }}" value="{{ opt.key }}" class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500 focus:ring-offset-slate-900">
-                                <span class="text-sm font-semibold text-slate-400 group-hover:text-slate-200 transition">
-                                    <strong class="text-indigo-400 mr-1">{{ opt.key }}.</strong> {{ opt.text }}
-                                </span>
-                            </label>
-                        {% endfor %}
+                        <label class="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 hover:border-indigo-500/40 transition group">
+                            <input type="radio" name="question_{{ q.id }}" value="A" class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500 focus:ring-offset-slate-900">
+                            <span class="text-sm font-semibold text-slate-400 group-hover:text-slate-200 transition">
+                                <strong class="text-indigo-400 mr-1">A.</strong> {{ q.option_a }}
+                            </span>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 hover:border-indigo-500/40 transition group">
+                            <input type="radio" name="question_{{ q.id }}" value="B" class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500 focus:ring-offset-slate-900">
+                            <span class="text-sm font-semibold text-slate-400 group-hover:text-slate-200 transition">
+                                <strong class="text-indigo-400 mr-1">B.</strong> {{ q.option_b }}
+                            </span>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 hover:border-indigo-500/40 transition group">
+                            <input type="radio" name="question_{{ q.id }}" value="C" class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500 focus:ring-offset-slate-900">
+                            <span class="text-sm font-semibold text-slate-400 group-hover:text-slate-200 transition">
+                                <strong class="text-indigo-400 mr-1">C.</strong> {{ q.option_c }}
+                            </span>
+                        </label>
+
+                        <label class="flex items-center gap-3 p-4 bg-slate-950 border border-slate-800/80 rounded-xl cursor-pointer hover:bg-slate-800/40 hover:border-indigo-500/40 transition group">
+                            <input type="radio" name="question_{{ q.id }}" value="D" class="w-4 h-4 text-indigo-600 bg-slate-900 border-slate-700 focus:ring-indigo-500 focus:ring-offset-slate-900">
+                            <span class="text-sm font-semibold text-slate-400 group-hover:text-slate-200 transition">
+                                <strong class="text-indigo-400 mr-1">D.</strong> {{ q.option_d }}
+                            </span>
+                        </label>
                     </div>
                 </div>
             {% endfor %}
@@ -89,7 +108,7 @@
                 timerElement.textContent = "00:00";
                 alert("🚨 Đã hết giờ làm bài! Hệ thống sẽ tự động nộp bài của bạn ngay lập tức.");
                 
-                // Loại bỏ thuộc tính confirm trên nút nộp để tránh bị nghẽn lệnh submit tự động
+                // Thực hiện gửi dữ liệu form tự động lên hệ thống
                 formElement.submit();
             }
 

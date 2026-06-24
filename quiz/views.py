@@ -108,7 +108,7 @@ def submit_quiz(request, exam_id):
     )
 
     messages.success(request, f"Nộp bài thành công! Bạn đúng {correct_answers}/{total_questions} câu. Điểm số: {score}")
-    return redirect('home')
+    return render(request, 'quiz/result.html', {'result': result})
 
 # ========================================================
 # HÀM XEM LẠI LỊCH SỬ THI VÀ ĐÁP ÁN SAI (REVIEW RESULT)
