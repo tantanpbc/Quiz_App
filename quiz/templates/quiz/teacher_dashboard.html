@@ -66,9 +66,14 @@
             <p class="text-xs text-slate-400">
                 💡 Để tạo thêm đề thi, câu hỏi trắc nghiệm mới hoặc tạo thêm lớp học, hãy sử dụng trang quản trị.
             </p>
-            <a href="/admin/" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95">
-                ⚙️ Đi tới Trang Quản Trị (Admin)
-            </a>
+            <div class="flex gap-3">
+                <a href="{% url 'analytics_dashboard' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95">
+                    📊 Analytics Dashboard
+                </a>
+                <a href="/admin/" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95">
+                    ⚙️ Đi tới Trang Quản Trị (Admin)
+                </a>
+            </div>
         </section>
 
         <section class="space-y-6">

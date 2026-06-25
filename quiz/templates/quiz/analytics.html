@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📊 Bảng phân tích - Hệ thống Trắc nghiệm</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body class="bg-slate-950 min-h-screen font-sans antialiased text-slate-100">
+
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">📊</span>
+                <div>
+                    <h1 class="text-base font-black text-white tracking-wide">ANALYTICS DASHBOARD</h1>
+                    <p class="text-[10px] text-blue-400 font-medium uppercase tracking-wider">Phân tích kết quả & Hiệu suất</p>
+                </div>
+            </div>
+            <a href="{% url 'teacher_dashboard' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">
+                ← Quay lại Dashboard
+            </a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        
+        <!-- Exam Selector -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <form method="GET" class="flex gap-4">
+                <select name="exam_id" onchange="this.form.submit()" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-slate-300 focus:outline-none focus:border-indigo-500">
+                    <option value="">📋 Tất cả đề thi</option>
+                    {% for exam in exams %}
+                        <option value="{{ exam.id }}" {% if selected_exam.id == exam.id %}selected{% endif %}>
+                            {{ exam.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+
+        <!-- Key Metrics -->
+        <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Tổng lượt nộp</p>
+                    <h3 class="text-3xl font-black text-white mt-1">{{ stats.total_submissions }}</h3>
+                </div>
+                <span class="text-3xl bg-indigo-500/10 p-3 rounded-xl text-indigo-400">📝</span>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Điểm trung bình</p>
+                    <h3 class="text-3xl font-black text-white mt-1">{{ stats.avg_score }}/10</h3>
+                </div>
+                <span class="text-3xl bg-emerald-500/10 p-3 rounded-xl text-emerald-400">📈</span>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Điểm thấp nhất</p>
+                    <h3 class="text-3xl font-black text-white mt-1">{{ stats.min_score }}</h3>
+                </div>
+                <span class="text-3xl bg-rose-500/10 p-3 rounded-xl text-rose-400">📉</span>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Điểm cao nhất</p>
+                    <h3 class="text-3xl font-black text-white mt-1">{{ stats.max_score }}</h3>
+                </div>
+                <span class="text-3xl bg-amber-500/10 p-3 rounded-xl text-amber-400">⭐</span>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            
+            <!-- Score Distribution Chart -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-white mb-6">📊 Phân bố điểm</h2>
+                <canvas id="scoreChart"></canvas>
+            </div>
+
+            <!-- Top Performers -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+                <h2 class="text-lg font-bold text-white mb-6">🏆 Top 5 học sinh xuất sắc</h2>
+                <div class="space-y-3">
+                    {% for performer in top_performers %}
+                        <div class="flex justify-between items-center p-4 bg-slate-950 rounded-xl border border-slate-800/50">
+                            <div>
+                                <p class="text-sm font-bold text-slate-200">{{ performer.student.username }}</p>
+                                <p class="text-xs text-slate-500">{{ performer.exam.title }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-black text-emerald-400">{{ performer.score }}/10</p>
+                                <p class="text-xs text-slate-500">Lần {{ performer.attempt_number }}</p>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <p class="text-sm text-slate-500 py-6 text-center">Chưa có bài nộp nào</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Question Difficulty Analysis -->
+        {% if selected_exam and question_stats %}
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <h2 class="text-lg font-bold text-white mb-6">❓ Phân tích độ khó từng câu hỏi</h2>
+            <div class="space-y-3">
+                {% for q in question_stats %}
+                    <div class="flex justify-between items-center p-4 bg-slate-950 rounded-xl border border-slate-800/50">
+                        <div class="flex-1">
+                            <p class="text-sm font-bold text-slate-200">{{ q.question }}</p>
+                            <p class="text-xs text-slate-500 mt-1">{{ q.correct }}/{{ q.total }} học sinh làm đúng</p>
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div class="w-24 bg-slate-900 rounded-lg h-2 border border-slate-700">
+                                <div class="bg-gradient-to-r {% if q.pass_rate >= 75 %}from-emerald-500 to-emerald-600{% elif q.pass_rate >= 50 %}from-amber-500 to-amber-600{% else %}from-rose-500 to-rose-600{% endif %} h-full rounded-lg" style="width: {{ q.pass_rate }}%"></div>
+                            </div>
+                            <div class="text-right w-20">
+                                <p class="text-sm font-bold text-slate-200">{{ q.pass_rate }}%</p>
+                                <p class="text-xs text-slate-500">{{ q.difficulty }}</p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recent Submissions -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <h2 class="text-lg font-bold text-white mb-6">📝 Bài nộp gần đây</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead>
+                        <tr class="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+                            <th class="py-3 px-4">Học sinh</th>
+                            <th class="py-3 px-4">Đề thi</th>
+                            <th class="py-3 px-4 text-center">Lần thứ</th>
+                            <th class="py-3 px-4 text-center">Điểm</th>
+                            <th class="py-3 px-4">Thời gian</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/40">
+                        {% for res in results %}
+                            <tr class="hover:bg-slate-800/10 transition">
+                                <td class="py-3 px-4 font-bold text-slate-200">{{ res.student.username }}</td>
+                                <td class="py-3 px-4 text-slate-400">{{ res.exam.title }}</td>
+                                <td class="py-3 px-4 text-center text-slate-400">{{ res.attempt_number }}</td>
+                                <td class="py-3 px-4 text-center font-bold {% if res.score >= 5 %}text-emerald-400{% else %}text-rose-400{% endif %}">{{ res.score }}</td>
+                                <td class="py-3 px-4 text-slate-500 text-[11px]">{{ res.completed_at|date:"H:i - d/m/Y" }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="py-6 text-center text-slate-600 italic">Không có bài nộp nào</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Score Distribution Chart
+        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+        const scoreChart = new Chart(scoreCtx, {
+            type: 'bar',
+            data: {
+                labels: ['0-2', '2-4', '4-6', '6-8', '8-10'],
+                datasets: [{
+                    label: 'Số lượng học sinh',
+                    data: {{ score_data|safe }},
+                    backgroundColor: [
+                        'rgba(239, 68, 68, 0.5)',
+                        'rgba(249, 115, 22, 0.5)',
+                        'rgba(234, 179, 8, 0.5)',
+                        'rgba(59, 130, 246, 0.5)',
+                        'rgba(34, 197, 94, 0.5)',
+                    ],
+                    borderColor: [
+                        'rgba(239, 68, 68, 1)',
+                        'rgba(249, 115, 22, 1)',
+                        'rgba(234, 179, 8, 1)',
+                        'rgba(59, 130, 246, 1)',
+                        'rgba(34, 197, 94, 1)',
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            color: '#334155',
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            color: '#94a3b8'
+                        },
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+</body>
+</html>

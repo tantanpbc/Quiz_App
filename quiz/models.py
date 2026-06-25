@@ -12,7 +12,6 @@ class Exam(models.Model):
     title = models.CharField(max_length=200, verbose_name="Tên đề thi")
     duration = models.IntegerField(verbose_name="Thời gian (phút)")
     
-    # 1. ĐÃ SỬA THÀNH on_delete CHÍNH XÁC
     classroom = models.ForeignKey(
         Classroom, 
         on_delete=models.SET_NULL, 
@@ -22,11 +21,34 @@ class Exam(models.Model):
         verbose_name="Dành cho lớp"
     )
     
-    # 2. ĐÃ BỔ SUNG TRƯỜNG NÀY ĐỂ HẾT LỖI ADMIN (E108)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo", null=True, blank=True)
+    
+    # Feature 1: Exam scheduling
+    start_date = models.DateTimeField(null=True, blank=True, verbose_name="Bắt đầu vào", help_text="Để trống = mở ngay lập tức")
+    end_date = models.DateTimeField(null=True, blank=True, verbose_name="Kết thúc lúc", help_text="Để trống = không có deadline")
+    
+    # Feature 3: Retake limits
+    max_attempts = models.IntegerField(default=1, verbose_name="Số lần làm bài tối đa", help_text="1 = chỉ làm 1 lần, 0 = vô hạn")
+    
+    # Feature 4: Question randomization
+    randomize_questions = models.BooleanField(default=False, verbose_name="Xáo trộn thứ tự câu hỏi")
+    randomize_options = models.BooleanField(default=False, verbose_name="Xáo trộn thứ tự đáp án")
 
     def __str__(self):
         return self.title
+    
+    def is_available(self):
+        """Check if exam is currently available for students"""
+        from django.utils import timezone
+        now = timezone.now()
+        
+        if self.start_date and now < self.start_date:
+            return False, f"Đề thi chưa mở. Bắt đầu vào {self.start_date.strftime('%d/%m/%Y %H:%M')}"
+        
+        if self.end_date and now > self.end_date:
+            return False, f"Đề thi đã đóng (kết thúc lúc {self.end_date.strftime('%d/%m/%Y %H:%M')})"
+        
+        return True, ""
 
 class Question(models.Model):
     exam = models.ForeignKey(Exam, on_delete=models.CASCADE, related_name='questions')
@@ -48,6 +70,18 @@ class Result(models.Model):
     score = models.FloatField()
     completed_at = models.DateTimeField(auto_now_add=True)
     answers_json = models.TextField(default="{}")
+    
+    # Feature 3: Track attempt number
+    attempt_number = models.IntegerField(default=1, verbose_name="Lần thứ")
+    
+    # Feature 2: Teacher feedback on student results
+    teacher_feedback = models.TextField(blank=True, verbose_name="Nhận xét của giáo viên", help_text="Nhận xét hoặc gợi ý cho học sinh")
+    
+    # Feature 4: Randomization seed for question order
+    randomization_seed = models.IntegerField(null=True, blank=True, verbose_name="Seed xáo trộn")
+    
+    class Meta:
+        ordering = ['-completed_at']
 
     def __str__(self):
-        return f"{self.student.username} - {self.exam.title} - {self.score}"
+        return f"{self.student.username} - {self.exam.title} - {self.score} (Lần {self.attempt_number})"

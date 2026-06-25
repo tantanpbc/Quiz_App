@@ -8,14 +8,33 @@ class QuestionInline(admin.TabularInline):
 
 @admin.register(Exam)
 class ExamAdmin(admin.ModelAdmin):
-    # Hiển thị các cột thông tin ngoài danh sách đề thi bao gồm trường created_at và lớp học
-    list_display = ('id', 'title', 'classroom', 'duration', 'created_at')
-    # Cho phép chỉnh sửa nhanh lớp học hoặc thời gian làm bài ngay ở trang danh sách
-    list_editable = ('classroom', 'duration')
+    list_display = ('id', 'title', 'classroom', 'duration', 'max_attempts', 'status_badge', 'created_at')
+    list_editable = ('classroom', 'duration', 'max_attempts')
     search_fields = ('title',)
     
-    # Tích hợp form thêm câu hỏi inline vào chung trang Add/Edit exam
+    fieldsets = (
+        ('Thông tin cơ bản', {
+            'fields': ('title', 'duration', 'classroom', 'created_at')
+        }),
+        ('Lịch trình & Khả dụng', {
+            'fields': ('start_date', 'end_date'),
+            'description': 'Để trống = không giới hạn thời gian'
+        }),
+        ('Giới hạn & Xáo trộn', {
+            'fields': ('max_attempts', 'randomize_questions', 'randomize_options'),
+            'description': '• max_attempts = 0 để cho phép làm vô hạn<br/>• Bật xáo trộn để chống gian lận'
+        }),
+    )
+    
     inlines = [QuestionInline]
+    
+    def status_badge(self, obj):
+        """Show exam availability status"""
+        is_available, msg = obj.is_available()
+        if is_available:
+            return "✅ Mở"
+        return "🔒 Đóng"
+    status_badge.short_description = "Trạng thái"
 
 @admin.register(Classroom)
 class ClassroomAdmin(admin.ModelAdmin):
@@ -30,5 +49,12 @@ class QuestionAdmin(admin.ModelAdmin):
 
 @admin.register(Result)
 class ResultAdmin(admin.ModelAdmin):
-    list_display = ('id', 'student', 'exam', 'correct_answers', 'total_questions', 'score', 'completed_at')
-    list_filter = ('exam', 'student')
+    list_display = ('id', 'student', 'exam', 'correct_answers', 'total_questions', 'score', 'attempt_number', 'completed_at')
+    list_filter = ('exam', 'student', 'attempt_number')
+    search_fields = ('student__username', 'exam__title')
+    
+    fields = ('student', 'exam', 'correct_answers', 'total_questions', 'score', 'attempt_number', 'completed_at', 'answers_json', 'teacher_feedback', 'randomization_seed')
+    readonly_fields = ('student', 'exam', 'correct_answers', 'total_questions', 'score', 'completed_at', 'answers_json', 'attempt_number', 'randomization_seed')
+    
+    def has_add_permission(self, request):
+        return False  # Results created by submit_quiz, not manually

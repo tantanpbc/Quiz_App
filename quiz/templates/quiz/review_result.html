@@ -57,6 +57,16 @@
                 </div>
             {% endfor %}
         </div>
+
+        <!-- Feature 2: Show teacher feedback if available -->
+        {% if result.teacher_feedback %}
+        <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <h3 class="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                👨‍🏫 Nhận xét từ giáo viên
+            </h3>
+            <p class="text-sm text-blue-800 leading-relaxed whitespace-pre-wrap">{{ result.teacher_feedback }}</p>
+        </div>
+        {% endif %}
     </div>
 
 </body>

@@ -63,14 +63,34 @@ def take_quiz(request, exam_id):
     if exam.classroom and not exam.classroom.students.filter(id=request.user.id).exists():
         return HttpResponse("Bạn không thuộc lớp học được quyền làm đề thi này.", status=403)
 
-    if Result.objects.filter(student=request.user, exam=exam).exists():
-        messages.warning(request, "Bạn đã hoàn thành bài thi này trước đó!")
+    # Feature 1: Check exam availability (scheduling)
+    is_available, unavailable_msg = exam.is_available()
+    if not is_available:
+        messages.error(request, unavailable_msg)
         return redirect('home')
 
-    questions = exam.questions.all()
+    # Feature 3: Check retake limits
+    student_attempts = Result.objects.filter(student=request.user, exam=exam).count()
+    if exam.max_attempts > 0 and student_attempts >= exam.max_attempts:
+        messages.error(request, f"Bạn đã hết số lần làm bài cho đề thi này (tối đa {exam.max_attempts} lần).")
+        return redirect('home')
+
+    questions = list(exam.questions.all())
+    
+    # Feature 4: Randomize questions if enabled
+    import random
+    randomization_seed = None
+    if exam.randomize_questions or exam.randomize_options:
+        randomization_seed = random.randint(0, 999999)
+        random.seed(randomization_seed)
+        if exam.randomize_questions:
+            random.shuffle(questions)
+
     context = {
         'exam': exam,
         'questions': questions,
+        'randomization_seed': randomization_seed,
+        'remaining_attempts': exam.max_attempts - student_attempts if exam.max_attempts > 0 else 'Vô hạn',
     }
     return render(request, 'quiz/exam.html', context)
 
@@ -81,8 +101,10 @@ def submit_quiz(request, exam_id):
         
     exam = get_object_or_404(Exam, id=exam_id)
     
-    if Result.objects.filter(student=request.user, exam=exam).exists():
-        return HttpResponse("Bài thi này đã được nộp từ trước.", status=400)
+    # Feature 3: Check retake limits on submission
+    student_attempts = Result.objects.filter(student=request.user, exam=exam).count()
+    if exam.max_attempts > 0 and student_attempts >= exam.max_attempts:
+        return HttpResponse("Bạn đã hết số lần làm bài cho đề thi này.", status=400)
 
     questions = exam.questions.all()
     correct_answers = 0
@@ -98,16 +120,25 @@ def submit_quiz(request, exam_id):
 
     score = round((correct_answers / total_questions) * 10, 2) if total_questions > 0 else 0
 
+    # Feature 3: Calculate attempt number
+    attempt_number = student_attempts + 1
+    
+    # Feature 4: Get randomization seed from form if present
+    randomization_seed = request.POST.get('randomization_seed')
+    randomization_seed = int(randomization_seed) if randomization_seed else None
+
     result = Result.objects.create(
         student=request.user,
         exam=exam,
         correct_answers=correct_answers,
         total_questions=total_questions,
         score=score,
-        answers_json=json.dumps(answers_dict)
+        answers_json=json.dumps(answers_dict),
+        attempt_number=attempt_number,
+        randomization_seed=randomization_seed,
     )
 
-    messages.success(request, f"Nộp bài thành công! Bạn đúng {correct_answers}/{total_questions} câu. Điểm số: {score}")
+    messages.success(request, f"Nộp bài lần {attempt_number} thành công! Bạn đúng {correct_answers}/{total_questions} câu. Điểm số: {score}")
     return render(request, 'quiz/result.html', {'result': result})
 
 # ========================================================
@@ -122,7 +153,14 @@ def review_result(request, result_id):
         return HttpResponse("Bạn không có quyền xem lại kết quả bài làm này.", status=403)
         
     exam = result.exam
-    questions = exam.questions.all()
+    questions = list(exam.questions.all())
+    
+    # Feature 4: Re-apply same randomization to show questions in same order as student took them
+    import random
+    if result.randomization_seed is not None:
+        random.seed(result.randomization_seed)
+        if exam.randomize_questions:
+            random.shuffle(questions)
     
     # Chuyển đổi dữ liệu JSON câu trả lời của học sinh thành Dict trong Python
     try:
@@ -136,12 +174,27 @@ def review_result(request, result_id):
         # Lấy đáp án học sinh đã chọn cho câu hỏi này (nếu không chọn thì mặc định là None)
         chosen_option = student_answers.get(str(q.id))
         
+        # Feature 4: Randomize options display if enabled
+        options = {'A': q.option_a, 'B': q.option_b, 'C': q.option_c, 'D': q.option_d}
+        correct_option = q.correct_option
+        
+        if exam.randomize_options and result.randomization_seed is not None:
+            random.seed(result.randomization_seed + q.id)  # Consistent seed per question
+            option_order = ['A', 'B', 'C', 'D']
+            random.shuffle(option_order)
+            options = {opt: options[opt] for opt in option_order}
+            # Map back the correct option to its new position
+            correct_option = [opt for opt in option_order if options[opt] == q.option_a and q.correct_option == 'A' or 
+                            options[opt] == q.option_b and q.correct_option == 'B' or
+                            options[opt] == q.option_c and q.correct_option == 'C' or
+                            options[opt] == q.option_d and q.correct_option == 'D'][0] if q.correct_option else None
+        
         questions_review.append({
             'question_text': q.question_text,
-            'option_a': q.option_a,
-            'option_b': q.option_b,
-            'option_c': q.option_c,
-            'option_d': q.option_d,
+            'option_a': options.get('A', q.option_a),
+            'option_b': options.get('B', q.option_b),
+            'option_c': options.get('C', q.option_c),
+            'option_d': options.get('D', q.option_d),
             'correct_option': q.correct_option,
             'chosen_option': chosen_option,
             'is_correct': chosen_option == q.correct_option
@@ -153,6 +206,78 @@ def review_result(request, result_id):
         'questions_review': questions_review,
     }
     return render(request, 'quiz/review_result.html', context)
+
+@login_required
+def analytics_dashboard(request):
+    """Feature 1: Analytics dashboard with charts and performance analysis"""
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền truy cập khu vực này.", status=403)
+    
+    from django.db.models import Avg, Count, Min, Max
+    
+    exam_id = request.GET.get('exam_id')
+    selected_exam = None
+    
+    if exam_id:
+        selected_exam = get_object_or_404(Exam, id=exam_id)
+        results = Result.objects.filter(exam=selected_exam).select_related('student')
+    else:
+        results = Result.objects.select_related('student', 'exam')
+    
+    # Calculate statistics
+    stats = {
+        'total_submissions': results.count(),
+        'avg_score': results.aggregate(Avg('score'))['score__avg'] or 0,
+        'min_score': results.aggregate(Min('score'))['score__min'] or 0,
+        'max_score': results.aggregate(Max('score'))['score__max'] or 0,
+    }
+    stats['avg_score'] = round(stats['avg_score'], 2)
+    
+    # Score distribution for chart
+    score_data = [
+        results.filter(score__lt=2).count(),      # 0-2
+        results.filter(score__gte=2, score__lt=4).count(),   # 2-4
+        results.filter(score__gte=4, score__lt=6).count(),   # 4-6
+        results.filter(score__gte=6, score__lt=8).count(),   # 6-8
+        results.filter(score__gte=8).count(),     # 8-10
+    ]
+    
+    # Question difficulty analysis (which questions have lowest pass rate)
+    question_stats = []
+    if selected_exam:
+        for q in selected_exam.questions.all():
+            correct_count = 0
+            for res in results:
+                try:
+                    answers = json.loads(res.answers_json)
+                    if answers.get(str(q.id)) == q.correct_option:
+                        correct_count += 1
+                except:
+                    pass
+            
+            pass_rate = (correct_count / results.count() * 100) if results.count() > 0 else 0
+            question_stats.append({
+                'question': q.question_text[:50],
+                'pass_rate': round(pass_rate, 1),
+                'correct': correct_count,
+                'total': results.count(),
+                'difficulty': 'Dễ' if pass_rate >= 75 else 'Trung bình' if pass_rate >= 50 else 'Khó'
+            })
+        question_stats.sort(key=lambda x: x['pass_rate'])
+    
+    # Top performers
+    top_performers = results.order_by('-score')[:5]
+    
+    context = {
+        'selected_exam': selected_exam,
+        'exams': Exam.objects.all(),
+        'stats': stats,
+        'score_data': score_data,
+        'question_stats': question_stats,
+        'top_performers': top_performers,
+        'results': results[:20],  # Recent 20 submissions
+    }
+    return render(request, 'quiz/analytics.html', context)
 
 @login_required
 def teacher_dashboard(request):
