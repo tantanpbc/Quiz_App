@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng xếp hạng: {{ exam.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased py-10 px-4">
+
+    <div class="max-w-4xl mx-auto space-y-8">
+        
+        <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
+            <div class="flex items-center gap-3">
+                <div class="inline-flex items-center justify-center w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <i class="fas fa-trophy text-xl text-amber-400"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-black text-white tracking-wide uppercase">BẢNG XẾP HẠNG</h1>
+                    <p class="text-xs text-slate-400 mt-0.5">{{ exam.title }}</p>
+                </div>
+            </div>
+            <a href="{% url 'home' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i>
+                Quay lại Trang chủ
+            </a>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end pt-6">
+            
+            {% if leaderboard|length >= 2 %}
+            {% with second=leaderboard|slice:"1:2"|first %}
+            <div class="bg-slate-900 border border-slate-800/60 rounded-2xl p-5 text-center shadow-md order-2 md:order-1 md:h-44 flex flex-col justify-center relative">
+                <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-800 border-2 border-slate-400 w-10 h-10 rounded-full flex items-center justify-center font-bold text-slate-300 shadow-lg">
+                    2
+                </div>
+                <i class="fas fa-medal text-2xl text-slate-400 mb-2 mt-2"></i>
+                <h3 class="text-sm font-bold text-slate-200 truncate">{{ second.student__username }}</h3>
+                <p class="text-xl font-black text-slate-300 mt-1">{{ second.max_score }}/10</p>
+                <p class="text-[10px] text-slate-500 mt-0.5">Thời gian: {{ second.min_duration|floatformat:1 }}s</p>
+            </div>
+            {% endwith %}
+            {% endif %}
+
+            {% if leaderboard|length >= 1 %}
+            {% with first=leaderboard|first %}
+            <div class="bg-gradient-to-b from-indigo-950/40 to-slate-900 border-2 border-amber-500/40 rounded-2xl p-6 text-center shadow-xl order-1 md:order-2 md:h-52 flex flex-col justify-center relative">
+                <div class="absolute -top-7 left-1/2 -translate-x-1/2 text-amber-400 animate-bounce">
+                    <i class="fas fa-crown text-3xl"></i>
+                </div>
+                <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-amber-500 text-slate-950 w-10 h-10 rounded-full flex items-center justify-center font-black shadow-lg border-2 border-slate-950">
+                    1
+                </div>
+                <h3 class="text-base font-black text-white truncate mt-3">{{ first.student__username }}</h3>
+                <p class="text-2xl font-black text-amber-400 mt-1">{{ first.max_score }}/10</p>
+                <p class="text-xs text-slate-400 mt-0.5">Thời gian: {{ first.min_duration|floatformat:1 }}s</p>
+            </div>
+            {% endwith %}
+            {% endif %}
+
+            {% if leaderboard|length >= 3 %}
+            {% with third=leaderboard|slice:"2:3"|first %}
+            <div class="bg-slate-900 border border-slate-800/60 rounded-2xl p-5 text-center shadow-md order-3 md:order-3 md:h-40 flex flex-col justify-center relative">
+                <div class="absolute -top-5 left-1/2 -translate-x-1/2 bg-slate-800 border-2 border-amber-700 w-10 h-10 rounded-full flex items-center justify-center font-bold text-amber-600 shadow-lg">
+                    3
+                </div>
+                <i class="fas fa-medal text-2xl text-amber-700 mb-2 mt-2"></i>
+                <h3 class="text-sm font-bold text-slate-200 truncate">{{ third.student__username }}</h3>
+                <p class="text-xl font-black text-amber-600 mt-1">{{ third.max_score }}/10</p>
+                <p class="text-[10px] text-slate-500 mt-0.5">Thời gian: {{ third.min_duration|floatformat:1 }}s</p>
+            </div>
+            {% endwith %}
+            {% endif %}
+
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-md">
+            <div class="p-4 border-b border-slate-800 bg-slate-850/50">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fas fa-list-ol text-indigo-400"></i> Thứ hạng chi tiết
+                </h2>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full border-collapse text-left text-xs">
+                    <thead>
+                        <tr class="border-b border-slate-800 bg-slate-800/20 text-slate-400 font-bold uppercase tracking-wider">
+                            <th class="px-6 py-3 w-20">Thứ tự</th>
+                            <th class="px-6 py-3">Học sinh</th>
+                            <th class="px-6 py-3">Điểm cao nhất</th>
+                            <th class="px-6 py-3">Thời gian làm bài</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800/40">
+                        {% for row in leaderboard %}
+                        <tr class="hover:bg-slate-800/30 transition {% if forloop.counter <= 3 %}bg-indigo-950/10{% endif %}">
+                            <td class="px-6 py-3 font-bold">
+                                {% if forloop.counter == 1 %}
+                                    <span class="text-amber-400"><i class="fas fa-trophy mr-1"></i> 1</span>
+                                {% elif forloop.counter == 2 %}
+                                    <span class="text-slate-400"><i class="fas fa-medal mr-1"></i> 2</span>
+                                {% elif forloop.counter == 3 %}
+                                    <span class="text-amber-700"><i class="fas fa-medal mr-1"></i> 3</span>
+                                {% else %}
+                                    <span class="text-slate-500 pl-5">{{ forloop.counter }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-3 font-semibold text-slate-200">
+                                {{ row.student__username }}
+                            </td>
+                            <td class="px-6 py-3 font-black text-emerald-400">
+                                {{ row.max_score }}/10
+                            </td>
+                            <td class="px-6 py-3 text-slate-400">
+                                {{ row.min_duration|floatformat:1 }} giây
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="p-8 text-center text-slate-500">
+                                <i class="fas fa-inbox text-2xl block mb-2"></i> Chưa có lượt nộp bài nào được ghi nhận.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</body>
+</html>

@@ -14,23 +14,46 @@ from datetime import timedelta
 def home(request):
     if request.user.is_staff or request.user.is_superuser:
         return redirect('teacher_dashboard')
-        
-    user_classrooms = request.user.classrooms.all()
-    exams = Exam.objects.filter(classroom__in=user_classrooms).distinct()
-    user_results = Result.objects.filter(student=request.user).select_related('exam')
 
-    attempt_counts = {}
+    user_classrooms = request.user.classrooms.all()
+
+    exams = (
+        Exam.objects
+        .filter(classroom__in=user_classrooms)
+        .distinct()
+    )
+
+    user_results = (
+        Result.objects
+        .filter(student=request.user)
+        .select_related('exam')
+        .order_by('-completed_at')
+    )
 
     for exam in exams:
-        count = Result.objects.filter(student=request.user,exam=exam).count()
-        attempt_counts[exam.id] = count
+        exam.student_attempts = Result.objects.filter(
+            student=request.user,
+            exam=exam
+        ).count()
+
+        if exam.max_attempts > 0:
+            exam.remaining_attempts = (
+                exam.max_attempts -
+                exam.student_attempts
+            )
+        else:
+            exam.remaining_attempts = "Vô hạn"
 
     context = {
-        'exams': exams,
-        'user_results': user_results,
-        'attempt_counts': attempt_counts,
+        "exams": exams,
+        "user_results": user_results,
     }
-    return render(request, 'quiz/home.html', context)
+
+    return render(
+        request,
+        "quiz/home.html",
+        context
+    )
 
 def custom_login(request):
     if request.user.is_authenticated:
@@ -372,26 +395,128 @@ def analytics_dashboard(request):
     return render(request, 'quiz/analytics.html', context)
 
 @login_required
+@login_required
 def teacher_dashboard(request):
-    if not (request.user.is_staff or request.user.is_superuser):
-        return HttpResponse("Bạn không có quyền truy cập khu vực này.", status=403)
-        
-    exams = Exam.objects.all().select_related('classroom').prefetch_related('questions')
-    
+
+    if not (
+        request.user.is_staff or
+        request.user.is_superuser
+    ):
+        return HttpResponse(
+            "Bạn không có quyền truy cập khu vực này.",
+            status=403
+        )
+
+    search_query = request.GET.get(
+        "q",
+        ""
+    )
+
+    exams = (
+        Exam.objects
+        .all()
+        .select_related("classroom")
+        .prefetch_related("questions")
+    )
+
+    if search_query:
+        exams = exams.filter(
+            Q(title__icontains=search_query)
+        )
+
     exams_with_results = []
+
     for exam in exams:
-        ordered_results = Result.objects.filter(exam=exam).select_related('student').order_by('-score', 'completed_at')
+
+        ordered_results = (
+            Result.objects
+            .filter(exam=exam)
+            .select_related("student")
+            .order_by(
+                "-score",
+                "completed_at"
+            )
+        )
+
         exam.ordered_results = ordered_results
-        exams_with_results.append(exam)
-        
+
+        exam.avg_score = (
+            ordered_results.aggregate(
+                Avg("score")
+            )["score__avg"]
+            or 0
+        )
+
+        exam.total_attempts = (
+            ordered_results.count()
+        )
+
+        exams_with_results.append(
+            exam
+        )
+
     from django.contrib.auth.models import User
+
     context = {
-        'exams_with_results': exams_with_results,
-        'total_exams': Exam.objects.count(),
-        'total_students': User.objects.filter(is_staff=False, is_superuser=False).count(),
-        'total_results': Result.objects.count(),
+        "exams_with_results":
+            exams_with_results,
+
+        "total_exams":
+            Exam.objects.count(),
+
+        "total_students":
+            User.objects.filter(
+                is_staff=False,
+                is_superuser=False
+            ).count(),
+
+        "total_results":
+            Result.objects.count(),
+
+        "search_query":
+            search_query,
     }
-    return render(request, 'quiz/teacher_dashboard.html', context)
+
+    return render(
+        request,
+        "quiz/teacher_dashboard.html",
+        context
+    )
+
+@login_required
+def leaderboard(request, exam_id):
+
+    exam = get_object_or_404(
+        Exam,
+        id=exam_id
+    )
+
+    leaderboard_data = (
+        Result.objects
+        .filter(exam=exam)
+        .values(
+            "student__username"
+        )
+        .annotate(
+            best_score=Max("score"),
+            attempts=Count("id")
+        )
+        .order_by(
+            "-best_score"
+        )
+    )
+
+    context = {
+        "exam": exam,
+        "leaderboard":
+            leaderboard_data,
+    }
+
+    return render(
+        request,
+        "quiz/leaderboard.html",
+        context
+    )
 
 @login_required
 def export_exam_excel(request, exam_id):

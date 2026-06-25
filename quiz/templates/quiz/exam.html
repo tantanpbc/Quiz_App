@@ -37,7 +37,6 @@
         <form id="quiz-form" method="POST" action="{% url 'submit_quiz' exam.id %}" class="space-y-6">
             {% csrf_token %}
             
-            <!-- Feature 4: Store randomization seed for later review -->
             {% if randomization_seed %}
                 <input type="hidden" name="randomization_seed" value="{{ randomization_seed }}">
             {% endif %}
@@ -92,8 +91,8 @@
     </main>
 
     <script>
-        // Lấy thời gian duration từ Django (tính bằng phút) và chuyển thành giây
-        let totalSeconds = parseInt("{{ exam.duration }}") * 60;
+        // Thay đổi lấy thời gian chính xác từ backend (tính theo giây thực tế còn lại)
+        let totalSeconds = parseInt("{{ remaining_seconds }}");
         const timerElement = document.getElementById('countdown-timer');
         const formElement = document.getElementById('quiz-form');
 
@@ -101,25 +100,20 @@
             let minutes = Math.floor(totalSeconds / 60);
             let seconds = totalSeconds % 60;
 
-            // Thêm số 0 phía trước nếu số có 1 chữ số
             minutes = minutes < 10 ? '0' + minutes : minutes;
             seconds = seconds < 10 ? '0' + seconds : seconds;
 
             timerElement.textContent = `${minutes}:${seconds}`;
 
-            // Chuyển sang màu đỏ cảnh báo nếu dưới 1 phút
             if (totalSeconds <= 60) {
                 timerElement.classList.remove('text-rose-400');
                 timerElement.classList.add('text-red-500', 'animate-pulse');
             }
 
-            // Xử lý khi hết giờ làm bài
             if (totalSeconds <= 0) {
                 clearInterval(interval);
                 timerElement.textContent = "00:00";
                 alert("🚨 Đã hết giờ làm bài! Hệ thống sẽ tự động nộp bài của bạn ngay lập tức.");
-                
-                // Thực hiện gửi dữ liệu form tự động lên hệ thống
                 formElement.submit();
             }
 
