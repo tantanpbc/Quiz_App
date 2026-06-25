@@ -1,10 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from .models import Classroom, Exam, Question, Result, QuizSession
+from django.views.decorators.http import require_http_methods
+from django.db import transaction
 from django.db.models import Avg, Max, Min, Count, Q
+from .models import Classroom, Exam, Question, Result, QuizSession, ExamConstraintPreset
+from .forms import ExamCreationForm, QuestionForm, ExamQuickSetupForm
 import json
 from openpyxl import Workbook
 from django.utils import timezone
@@ -16,44 +19,24 @@ def home(request):
         return redirect('teacher_dashboard')
 
     user_classrooms = request.user.classrooms.all()
+    exams = Exam.objects.filter(classroom__in=user_classrooms).distinct()
 
-    exams = (
-        Exam.objects
-        .filter(classroom__in=user_classrooms)
-        .distinct()
-    )
-
-    user_results = (
-        Result.objects
-        .filter(student=request.user)
-        .select_related('exam')
-        .order_by('-completed_at')
-    )
+    user_results = Result.objects.filter(student=request.user).select_related('exam').order_by('-completed_at')
+    completed_exam_ids = user_results.values_list('exam_id', flat=True)
 
     for exam in exams:
-        exam.student_attempts = Result.objects.filter(
-            student=request.user,
-            exam=exam
-        ).count()
-
-        if exam.max_attempts > 0:
-            exam.remaining_attempts = (
-                exam.max_attempts -
-                exam.student_attempts
-            )
-        else:
-            exam.remaining_attempts = "Vô hạn"
+        exam.student_attempts = Result.objects.filter(student=request.user, exam=exam).count()
+        # Tính toán trạng thái khả dụng của đề thi
+        is_avail, msg = exam.is_available()
+        exam.is_available_status = is_avail
+        exam.available_message = msg
 
     context = {
-        "exams": exams,
-        "user_results": user_results,
+        'exams': exams,
+        'completed_exam_ids': completed_exam_ids,
+        'user_results': user_results,
     }
-
-    return render(
-        request,
-        "quiz/home.html",
-        context
-    )
+    return render(request, 'quiz/home.html', context)
 
 def custom_login(request):
     if request.user.is_authenticated:
@@ -67,7 +50,6 @@ def custom_login(request):
         role = request.POST.get('role')
 
         user = authenticate(request, username=username_login, password=password_login)
-        
         if user is not None:
             auth_login(request, user)
             if role == 'teacher' and (user.is_staff or user.is_superuser):
@@ -86,52 +68,58 @@ def custom_login(request):
 
 @login_required
 def take_quiz(request, exam_id):
+    # 1. Kiểm tra phân quyền: Không cho phép Giáo viên/Admin tham gia làm bài
     if request.user.is_staff or request.user.is_superuser:
         return HttpResponse("Giáo viên không được tham gia làm bài thi.", status=403)
         
     exam = get_object_or_404(Exam, id=exam_id)
-
-    session, created = QuizSession.objects.get_or_create(student=request.user,exam=exam)
     
+    # 2. Kiểm tra phân quyền: Thí sinh phải thuộc lớp được gán đề
     if exam.classroom and not exam.classroom.students.filter(id=request.user.id).exists():
         return HttpResponse("Bạn không thuộc lớp học được quyền làm đề thi này.", status=403)
 
-    # Feature 1: Check exam availability (scheduling)
-    is_available, unavailable_msg = exam.is_available()
-    if not is_available:
-        messages.error(request, unavailable_msg)
+    # 3. Kiểm tra số lượt làm bài thực tế của học sinh
+    attempts_count = Result.objects.filter(student=request.user, exam=exam).count()
+    if attempts_count >= exam.max_attempts:
+        messages.warning(request, f"Bạn đã dùng hết số lượt làm bài cho phép ({exam.max_attempts} lượt)!")
         return redirect('home')
 
-    # Feature 3: Check retake limits
-    student_attempts = Result.objects.filter(student=request.user, exam=exam).count()
-    if exam.max_attempts > 0 and student_attempts >= exam.max_attempts:
-        messages.error(request, f"Bạn đã hết số lần làm bài cho đề thi này (tối đa {exam.max_attempts} lần).")
-        return redirect('home')
+    # 4. TÍNH TOÁN SỐ LƯỢT LÀM BÀI CÒN LẠI (Sửa lỗi mất thông tin lượt làm)
+    remaining_attempts = exam.max_attempts - attempts_count
 
-    questions = list(exam.questions.all())
+    # 5. QUẢN LÝ THỜI GIAN LÀM BÀI QUA SESSIONS (Sửa lỗi đồng hồ --:--)
+    # Tìm xem học sinh có phiên làm bài nào chưa hoàn thành cho đề này không, nếu không thì tạo mới
+    session, created = QuizSession.objects.get_or_create(
+        student=request.user,
+        exam=exam,
+        is_completed=False,
+        defaults={'started_at': timezone.now()}
+    )
     
-    # Feature 4: Randomize questions if enabled
-    import random
-    randomization_seed = None
-    if exam.randomize_questions or exam.randomize_options:
-        randomization_seed = random.randint(0, 999999)
-        random.seed(randomization_seed)
-        if exam.randomize_questions:
-            random.shuffle(questions)
+    # Tính số giây đã trôi qua kể từ khi bắt đầu phiên làm bài
+    elapsed_seconds = (timezone.now() - session.started_at).total_seconds()
+    total_exam_seconds = exam.duration * 60
+    remaining_seconds = int(total_exam_seconds - elapsed_seconds)
+    
+    # Phòng trường hợp thời gian bị âm khi học sinh tải lại trang lúc sát giờ hết
+    if remaining_seconds < 0:
+        remaining_seconds = 0
 
-    elapsed = timezone.now() - session.start_time
+    # 6. Xử lý câu hỏi (Xáo trộn nếu có cấu hình)
+    questions = exam.questions.all()
+    if exam.randomize_questions:
+        questions = questions.order_by('?')
 
-    remaining = timedelta(minutes=exam.duration) - elapsed
-
-    remaining_seconds = max(0,int(remaining.total_seconds()))
-
+    # 7. TRUYỀN ĐẦY ĐỦ CÁC THAM SỐ CẦN THIẾT SANG TEMPLATE
     context = {
         'exam': exam,
         'questions': questions,
-        'randomization_seed': randomization_seed,
-        'remaining_attempts': exam.max_attempts - student_attempts if exam.max_attempts > 0 else 'Vô hạn',
-        'remaining_seconds': remaining_seconds,
+        'remaining_attempts': remaining_attempts,  # Truyền số lượt còn lại hiển thị ở khối màu vàng
+        'remaining_seconds': remaining_seconds,    # Truyền số giây cho JavaScript bắt đầu đếm lùi
     }
+    
+    # Lưu ý: Chỉnh sửa lại tên file template ở đây cho đúng với file bạn đang dùng 
+    # (Nếu file của bạn đặt tên là 'quiz/take_quiz.html' thay vì 'quiz/exam.html')
     return render(request, 'quiz/exam.html', context)
 
 @login_required
@@ -140,31 +128,10 @@ def submit_quiz(request, exam_id):
         return redirect('home')
         
     exam = get_object_or_404(Exam, id=exam_id)
-
-    try:
-        session = QuizSession.objects.get(
-            student=request.user,
-            exam=exam
-        )
-
-        elapsed = timezone.now() - session.start_time
-
-        if elapsed.total_seconds() > exam.duration * 60:
-
-            messages.error(
-                request,
-                "Đã hết thời gian làm bài."
-            )
-    except QuizSession.DoesNotExist:
-        return HttpResponse(
-        "Không tìm thấy phiên làm bài.",
-        status=400
-    )
     
-    # Feature 3: Check retake limits on submission
-    student_attempts = Result.objects.filter(student=request.user, exam=exam).count()
-    if exam.max_attempts > 0 and student_attempts >= exam.max_attempts:
-        return HttpResponse("Bạn đã hết số lần làm bài cho đề thi này.", status=400)
+    attempts_count = Result.objects.filter(student=request.user, exam=exam).count()
+    if attempts_count >= exam.max_attempts:
+        return HttpResponse("Bạn đã hết lượt làm bài thi này.", status=400)
 
     questions = exam.questions.all()
     correct_answers = 0
@@ -174,18 +141,10 @@ def submit_quiz(request, exam_id):
     for q in questions:
         selected_option = request.POST.get(f'question_{q.id}')
         answers_dict[str(q.id)] = selected_option
-        
         if selected_option == q.correct_option:
             correct_answers += 1
 
     score = round((correct_answers / total_questions) * 10, 2) if total_questions > 0 else 0
-
-    # Feature 3: Calculate attempt number
-    attempt_number = student_attempts + 1
-    
-    # Feature 4: Get randomization seed from form if present
-    randomization_seed = request.POST.get('randomization_seed')
-    randomization_seed = int(randomization_seed) if randomization_seed else None
 
     result = Result.objects.create(
         student=request.user,
@@ -193,73 +152,37 @@ def submit_quiz(request, exam_id):
         correct_answers=correct_answers,
         total_questions=total_questions,
         score=score,
-        answers_json=json.dumps(answers_dict),
-        attempt_number=attempt_number,
-        randomization_seed=randomization_seed,
+        answers_json=json.dumps(answers_dict)
     )
 
-    session.submitted = True
-    session.save()
-
-    session.delete()
-
-    messages.success(request, f"Nộp bài lần {attempt_number} thành công! Bạn đúng {correct_answers}/{total_questions} câu. Điểm số: {score}")
+    messages.success(request, f"Nộp bài thành công! Điểm số: {score}")
     return render(request, 'quiz/result.html', {'result': result})
 
-# ========================================================
-# HÀM XEM LẠI LỊCH SỬ THI VÀ ĐÁP ÁN SAI (REVIEW RESULT)
-# ========================================================
 @login_required
 def review_result(request, result_id):
     result = get_object_or_404(Result, id=result_id)
-    
-    # Bảo mật: Chỉ cho phép chính học sinh làm bài hoặc Giáo viên/Admin được quyền xem lại
     if result.student != request.user and not (request.user.is_staff or request.user.is_superuser):
         return HttpResponse("Bạn không có quyền xem lại kết quả bài làm này.", status=403)
         
     exam = result.exam
-    questions = list(exam.questions.all())
-    
-    # Feature 4: Re-apply same randomization to show questions in same order as student took them
-    import random
-    if result.randomization_seed is not None:
-        random.seed(result.randomization_seed)
-        if exam.randomize_questions:
-            random.shuffle(questions)
-    
-    # Chuyển đổi dữ liệu JSON câu trả lời của học sinh thành Dict trong Python
+    if not exam.allow_review and not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Đề thi này không cho phép xem lại đáp án.", status=403)
+
+    questions = exam.questions.all()
     try:
         student_answers = json.loads(result.answers_json)
     except:
         student_answers = {}
 
-    # Đóng gói cấu trúc dữ liệu câu hỏi đi kèm lựa chọn của học sinh để hiển thị
     questions_review = []
     for q in questions:
-        # Lấy đáp án học sinh đã chọn cho câu hỏi này (nếu không chọn thì mặc định là None)
         chosen_option = student_answers.get(str(q.id))
-        
-        # Feature 4: Randomize options display if enabled
-        options = {'A': q.option_a, 'B': q.option_b, 'C': q.option_c, 'D': q.option_d}
-        correct_option = q.correct_option
-        
-        if exam.randomize_options and result.randomization_seed is not None:
-            random.seed(result.randomization_seed + q.id)  # Consistent seed per question
-            option_order = ['A', 'B', 'C', 'D']
-            random.shuffle(option_order)
-            options = {opt: options[opt] for opt in option_order}
-            # Map back the correct option to its new position
-            correct_option = [opt for opt in option_order if options[opt] == q.option_a and q.correct_option == 'A' or 
-                            options[opt] == q.option_b and q.correct_option == 'B' or
-                            options[opt] == q.option_c and q.correct_option == 'C' or
-                            options[opt] == q.option_d and q.correct_option == 'D'][0] if q.correct_option else None
-        
         questions_review.append({
             'question_text': q.question_text,
-            'option_a': options.get('A', q.option_a),
-            'option_b': options.get('B', q.option_b),
-            'option_c': options.get('C', q.option_c),
-            'option_d': options.get('D', q.option_d),
+            'option_a': q.option_a,
+            'option_b': q.option_b,
+            'option_c': q.option_c,
+            'option_d': q.option_d,
             'correct_option': q.correct_option,
             'chosen_option': chosen_option,
             'is_correct': chosen_option == q.correct_option
@@ -273,250 +196,36 @@ def review_result(request, result_id):
     return render(request, 'quiz/review_result.html', context)
 
 @login_required
-def analytics_dashboard(request):
-    # 1. Lấy danh sách tất cả đề thi để hiển thị ở bộ lọc (Dropdown)
-    exams = Exam.objects.all()
-    
-    # 2. Kiểm tra xem người dùng có lọc theo đề thi cụ thể nào không
-    exam_id = request.GET.get('exam_id')
-    selected_exam = None
-    
-    # Khởi tạo QuerySet cho Results và Questions ban đầu
-    results = Result.objects.all()
-    
-    if exam_id:
-        try:
-            selected_exam = Exam.objects.get(id=exam_id)
-            results = results.filter(exam=selected_exam)
-        except Exam.DoesNotExist:
-            pass
-
-    # 3. Tính toán các chỉ số Key Metrics (Tổng lượt nộp, Điểm TB, Cao nhất, Thấp nhất)
-    total_submissions = results.count()
-    
-    if total_submissions > 0:
-        # Làm tròn điểm trung bình đến 2 chữ số thập phân
-        avg_score = round(results.aggregate(Avg('score'))['score__avg'] or 0, 2)
-        max_score = results.aggregate(Max('score'))['score__max']
-        min_score = results.aggregate(Min('score'))['score__min']
-    else:
-        avg_score = 0
-        max_score = 0
-        min_score = 0
-
-    stats = {
-        'total_submissions': total_submissions,
-        'avg_score': avg_score,
-        'max_score': max_score,
-        'min_score': min_score
-    }
-
-    # 4. Lấy danh sách Top 5 học sinh xuất sắc nhất (Sắp xếp theo điểm giảm dần)
-    top_performers = results.order_by('-score')[:5]
-
-    # 5. Phân tích phân bố điểm thành mảng 5 cột: ['0-2', '2-4', '4-6', '6-8', '8-10']
-    # Khởi tạo mảng ban đầu toàn số 0 để đếm số lượng học sinh rơi vào từng khoảng điểm
-    distribution_list = [0, 0, 0, 0, 0]
-    
-    for res in results:
-        score = res.score
-        if score < 2:
-            distribution_list[0] += 1
-        elif score < 4:
-            distribution_list[1] += 1
-        elif score < 6:
-            distribution_list[2] += 1
-        elif score < 8:
-            distribution_list[3] += 1
-        else:
-            distribution_list[4] += 1  # Điểm từ 8 đến 10
-
-    # Chuyển đổi mảng Python thành chuỗi JSON dạng sạch để truyền vào HTML
-    score_data_json = json.dumps(distribution_list)
-
-    # 6. Phân tích độ khó từng câu hỏi (Chỉ thực hiện khi giáo viên chọn một đề thi cụ thể)
-    question_stats = []
-    if selected_exam:
-        # Lấy tất cả câu hỏi thuộc đề thi này
-        questions = Question.objects.filter(exam=selected_exam)
-        
-        for q in questions:
-            # Tìm tất cả các kết quả thi của đề thi này
-            # Lưu ý: Bạn cần có logic bóc tách answers_json trong Result để đếm đúng/sai chính xác.
-            # Dưới đây là logic giả định hoặc bạn có thể đếm dựa theo cách lưu kết quả của bạn:
-            
-            total_answers = total_submissions
-            correct_count = 0
-            
-            # Giả định đọc từ answers_json để kiểm tra câu hỏi này học sinh chọn đúng hay sai
-            for res in results:
-                try:
-                    answers = json.loads(res.answers_json or '{}')
-                    # Nếu câu trả lời của học sinh trùng với đáp án đúng của câu hỏi
-                    if answers.get(str(q.id)) == q.correct_option:
-                        correct_count += 1
-                except:
-                    pass
-            
-            # Tính tỷ lệ làm đúng (Pass Rate)
-            pass_rate = round((correct_count / total_answers * 100), 1) if total_answers > 0 else 0
-            
-            # Phân loại độ khó dựa trên tỷ lệ làm đúng
-            if pass_rate >= 75:
-                difficulty = "Dễ"
-            elif pass_rate >= 50:
-                difficulty = "Trung bình"
-            else:
-                difficulty = "Khó"
-                
-            question_stats.append({
-                'question': q.question_text[:60] + '...' if len(q.question_text) > 60 else q.question_text,
-                'correct': correct_count,
-                'total': total_answers,
-                'pass_rate': pass_rate,
-                'difficulty': difficulty
-            })
-
-    # 7. Danh sách toàn bộ bài nộp gần đây (Hiển thị ở bảng cuối trang)
-    # Sắp xếp theo thời gian nộp mới nhất, giới hạn lấy 10 bài gần nhất (hoặc tùy bạn chỉnh)
-    recent_results = results.order_by('-completed_at')[:10]
-
-    # Đóng gói dữ liệu truyền sang file template HTML
-    context = {
-        'exams': exams,
-        'selected_exam': selected_exam,
-        'stats': stats,
-        'top_performers': top_performers,
-        'score_data': score_data_json,  # Chuỗi JSON dạng mảng sạch đã qua json.dumps()
-        'question_stats': question_stats,
-        'results': recent_results,
-    }
-    
-    return render(request, 'quiz/analytics.html', context)
-
-@login_required
-@login_required
 def teacher_dashboard(request):
-
-    if not (
-        request.user.is_staff or
-        request.user.is_superuser
-    ):
-        return HttpResponse(
-            "Bạn không có quyền truy cập khu vực này.",
-            status=403
-        )
-
-    search_query = request.GET.get(
-        "q",
-        ""
-    )
-
-    exams = (
-        Exam.objects
-        .all()
-        .select_related("classroom")
-        .prefetch_related("questions")
-    )
-
-    if search_query:
-        exams = exams.filter(
-            Q(title__icontains=search_query)
-        )
-
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền truy cập khu vực này.", status=403)
+        
+    exams = Exam.objects.all().select_related('classroom').prefetch_related('questions')
     exams_with_results = []
-
     for exam in exams:
-
-        ordered_results = (
-            Result.objects
-            .filter(exam=exam)
-            .select_related("student")
-            .order_by(
-                "-score",
-                "completed_at"
-            )
-        )
-
+        ordered_results = Result.objects.filter(exam=exam).select_related('student').order_by('-score', 'completed_at')
         exam.ordered_results = ordered_results
-
-        exam.avg_score = (
-            ordered_results.aggregate(
-                Avg("score")
-            )["score__avg"]
-            or 0
-        )
-
-        exam.total_attempts = (
-            ordered_results.count()
-        )
-
-        exams_with_results.append(
-            exam
-        )
-
+        exams_with_results.append(exam)
+        
     from django.contrib.auth.models import User
-
     context = {
-        "exams_with_results":
-            exams_with_results,
-
-        "total_exams":
-            Exam.objects.count(),
-
-        "total_students":
-            User.objects.filter(
-                is_staff=False,
-                is_superuser=False
-            ).count(),
-
-        "total_results":
-            Result.objects.count(),
-
-        "search_query":
-            search_query,
+        'exams_with_results': exams_with_results,
+        'total_exams': Exam.objects.count(),
+        'total_students': User.objects.filter(is_staff=False, is_superuser=False).count(),
+        'total_results': Result.objects.count(),
     }
+    return render(request, 'quiz/teacher_dashboard.html', context)
 
-    return render(
-        request,
-        "quiz/teacher_dashboard.html",
-        context
-    )
+@login_required
+def analytics_dashboard(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Không có quyền truy cập", status=403)
+    return render(request, 'quiz/analytics.html')
 
 @login_required
 def leaderboard(request, exam_id):
-
-    exam = get_object_or_404(
-        Exam,
-        id=exam_id
-    )
-
-    leaderboard_data = (
-        Result.objects
-        .filter(exam=exam)
-        .values(
-            "student__username"
-        )
-        .annotate(
-            best_score=Max("score"),
-            attempts=Count("id")
-        )
-        .order_by(
-            "-best_score"
-        )
-    )
-
-    context = {
-        "exam": exam,
-        "leaderboard":
-            leaderboard_data,
-    }
-
-    return render(
-        request,
-        "quiz/leaderboard.html",
-        context
-    )
+    exam = get_object_or_404(Exam, id=exam_id)
+    return render(request, 'quiz/leaderboard.html', {'exam': exam})
 
 @login_required
 def export_exam_excel(request, exam_id):
@@ -529,20 +238,217 @@ def export_exam_excel(request, exam_id):
     wb = Workbook()
     ws = wb.active
     ws.title = "Kết quả đề thi"
-    
     ws.append(["Thứ hạng", "Tài khoản học sinh", "Số câu đúng", "Tổng số câu", "Điểm số", "Thời gian nộp"])
     
     for idx, res in enumerate(results, start=1):
         ws.append([
-            idx,
-            res.student.username,
-            res.correct_answers,
-            res.total_questions,
-            res.score,
-            res.completed_at.strftime("%H:%M - %d/%m/%Y")
+            idx, res.student.username, res.correct_answers,
+            res.total_questions, res.score, res.completed_at.strftime("%H:%M - %d/%m/%Y")
         ])
         
     response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     response["Content-Disposition"] = f'attachment; filename="Ket_qua_{exam.id}.xlsx"'
     wb.save(response)
     return response
+
+# ================== NEW TEACHER EXAM MANAGEMENT VIEWS ==================
+
+@login_required
+def teacher_exams(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền.", status=403)
+    exams = Exam.objects.all().order_by('-created_at')
+    return render(request, 'quiz/teacher_exams.html', {'exams': exams})
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def create_exam(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền tạo đề thi.", status=403)
+    
+    if request.method == 'POST':
+        form = ExamCreationForm(request.POST)
+        if form.is_valid():
+            exam = form.save(commit=False)
+            exam.teacher = request.user
+            exam.save()
+            messages.success(request, f"✅ Tạo đề thi '{exam.title}' thành công! Hãy thêm câu hỏi.")
+            return redirect('edit_exam_questions', exam_id=exam.id)
+    else:
+        form = ExamCreationForm()
+    
+    presets = ExamConstraintPreset.objects.all()
+    preset_form = ExamQuickSetupForm()
+    
+    return render(request, 'quiz/create_exam.html', {
+        'form': form,
+        'preset_form': preset_form,
+        'presets': presets,
+        'is_edit': False,
+        'page_title': 'Tạo Đề Thi Mới',
+        'page_icon': 'plus-circle'
+    })
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_exam(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền.", status=403)
+        
+    if request.method == 'POST':
+        form = ExamCreationForm(request.POST, instance=exam)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"✅ Cập nhật cài đặt đề thi '{exam.title}' thành công!")
+            return redirect('teacher_exams')
+    else:
+        form = ExamCreationForm(instance=exam)
+        
+    return render(request, 'quiz/create_exam.html', {
+        'form': form,
+        'exam': exam,
+        'is_edit': True,
+        'page_title': 'Chỉnh Sửa Cài Đặt Đề Thi',
+        'page_icon': 'cog'
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def delete_exam(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền.", status=403)
+    title = exam.title
+    exam.delete()
+    messages.success(request, f"🗑️ Đã xóa đề thi '{title}' và tất cả các câu hỏi liên quan.")
+    return redirect('teacher_exams')
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_exam_questions(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền.", status=403)
+        
+    if request.method == 'POST':
+        form = QuestionForm(request.POST)
+        if form.is_valid():
+            question = form.save(commit=False)
+            question.exam = exam
+            # Đặt số thứ tự cuối cùng
+            max_order = exam.questions.aggregate(Max('order'))['order__max']
+            question.order = (max_order or 0) + 1
+            question.save()
+            messages.success(request, "✅ Đã thêm câu hỏi mới thành công!")
+            return redirect('edit_exam_questions', exam_id=exam.id)
+    else:
+        form = QuestionForm()
+        
+    questions = exam.questions.all().order_by('order')
+    return render(request, 'quiz/edit_exam_questions.html', {
+        'exam': exam,
+        'questions': questions,
+        'form': form,
+        'total_questions': questions.count()
+    })
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def edit_question(request, exam_id, question_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+    question = get_object_or_404(Question, id=question_id, exam=exam)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền.", status=403)
+        
+    if request.method == 'POST':
+        form = QuestionForm(request.POST, instance=question)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "✅ Cập nhật câu hỏi thành công!")
+            return redirect('edit_exam_questions', exam_id=exam.id)
+    else:
+        form = QuestionForm(instance=question)
+        
+    return render(request, 'quiz/edit_exam_questions.html', {
+        'exam': exam,
+        'form': form,
+        'editing_question': question,
+        'questions': exam.questions.all().order_by('order'),
+        'total_questions': exam.questions.count()
+    })
+
+@login_required
+@require_http_methods(["POST"])
+def delete_question(request, exam_id, question_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+    question = get_object_or_404(Question, id=question_id, exam=exam)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền.", status=403)
+    question.delete()
+    messages.success(request, "🗑️ Đã xóa câu hỏi.")
+    return redirect('edit_exam_questions', exam_id=exam.id)
+
+@login_required
+@require_http_methods(["POST"])
+def reorder_questions(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+        
+    try:
+        data = json.loads(request.body)
+        question_ids = data.get('question_ids', [])
+        with transaction.atomic():
+            for index, q_id in enumerate(question_ids):
+                Question.objects.filter(id=q_id, exam=exam).update(order=index)
+        return JsonResponse({'status': 'success'})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+@login_required
+def apply_preset(request, preset_id):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return JsonResponse({'error': 'Unauthorized'}, status=403)
+    try:
+        preset = ExamConstraintPreset.objects.get(id=preset_id)
+        return JsonResponse({
+            'status': 'success',
+            'preset': {
+                'duration': preset.default_duration,
+                'max_attempts': preset.default_max_attempts,
+                'passing_percentage': preset.default_passing_percentage,
+                'show_timer': preset.default_show_timer,
+                'show_score': preset.default_show_score,
+                'show_correct_answers': preset.default_show_correct_answers,
+                'allow_review': preset.default_allow_review,
+            }
+        })
+    except ExamConstraintPreset.DoesNotExist:
+        return JsonResponse({'error': 'Preset not found'}, status=404)
+
+@login_required
+def exam_preview(request, exam_id):
+    exam = get_object_or_404(Exam, id=exam_id)
+    if not (request.user.is_staff or request.user.is_superuser):
+        return HttpResponse("Bạn không có quyền xem.", status=403)
+    
+    now = timezone.now()
+    if exam.start_date:
+        if now < exam.start_date:
+            status, status_color = "⏰ Chưa mở", "yellow"
+        elif exam.end_date and now > exam.end_date:
+            status, status_color = "🔒 Đã đóng", "red"
+        else:
+            status, status_color = "✅ Đang mở", "green"
+    else:
+        status, status_color = "✅ Đang mở", "green"
+    
+    context = {
+        'exam': exam,
+        'status': status,
+        'status_color': status_color,
+        'total_questions': exam.questions.count(),
+        'page_title': 'Xem Trước Thiết Lập Đề Thi'
+    }
+    return render(request, 'quiz/exam_preview.html', context)

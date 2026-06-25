@@ -81,15 +81,19 @@
         <section class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/40 border border-slate-800 p-4 rounded-2xl mb-10">
             <p class="text-xs text-slate-400 flex items-center gap-2">
                 <i class="fas fa-lightbulb text-amber-400"></i>
-                Để tạo thêm đề thi, câu hỏi trắc nghiệm mới hoặc tạo thêm lớp học, hãy sử dụng trang quản trị.
+                Sử dụng các công cụ bên phải để quản lý đề thi nâng cao hoặc chuyển qua hệ thống quản trị admin.
             </p>
-            <div class="flex gap-3">
+            <div class="flex flex-wrap gap-3">
+                <a href="{% url 'teacher_exams' %}" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-2 shadow-indigo-950/50 border border-indigo-500/30">
+                    <i class="fas fa-folder-plus text-indigo-200"></i>
+                    Quản Lý & Tạo Đề Mới
+                </a>
                 <a href="{% url 'analytics_dashboard' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-2">
                     <i class="fas fa-chart-bar"></i>
                     Analytics Dashboard
                 </a>
-                <a href="/admin/" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-2">
-                    <i class="fas fa-gears"></i>
+                <a href="/admin/" target="_blank" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-2 border border-slate-700">
+                    <i class="fas fa-gears text-slate-400"></i>
                     Trang Quản Trị
                 </a>
             </div>

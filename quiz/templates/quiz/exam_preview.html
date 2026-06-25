@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xem Trước - {{ exam.title }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased py-10 px-4">
+
+    <div class="max-w-4xl mx-auto">
+        
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-10">
+            <div>
+                <h1 class="text-lg font-black text-white tracking-wide flex items-center gap-2">
+                    <i class="fas fa-eye text-indigo-400 text-xl"></i>
+                    Xem Trước Đề Thi
+                </h1>
+                <p class="text-xs text-slate-400 mt-0.5">Kiểm tra tất cả cài đặt và hạn chế trước khi mở</p>
+            </div>
+            <a href="{% url 'edit_exam' exam.id %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold rounded-xl border border-slate-700/50 transition shadow-sm flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i>
+                Quay Lại
+            </a>
+        </div>
+
+        <!-- Status Banner -->
+        <div class="mb-8 p-6 rounded-xl border-2 {% if status_color == 'green' %}bg-green-950/30 border-green-700{% elif status_color == 'red' %}bg-red-950/30 border-red-700{% else %}bg-yellow-950/30 border-yellow-700{% endif %}">
+            <h2 class="text-lg font-bold {% if status_color == 'green' %}text-green-300{% elif status_color == 'red' %}text-red-300{% else %}text-yellow-300{% endif %} flex items-center gap-2">
+                {% if status_color == 'green' %}
+                    <i class="fas fa-check-circle"></i>
+                {% elif status_color == 'red' %}
+                    <i class="fas fa-lock-alt"></i>
+                {% else %}
+                    <i class="fas fa-clock"></i>
+                {% endif %}
+                {{ status }}
+            </h2>
+            <p class="text-sm {% if status_color == 'green' %}text-green-200{% elif status_color == 'red' %}text-red-200{% else %}text-yellow-200{% endif %} mt-2">
+                {% if exam.start_date %}
+                    Mở từ: <strong>{{ exam.start_date|date:"d/m/Y H:i" }}</strong>
+                    {% if exam.end_date %}
+                        đến <strong>{{ exam.end_date|date:"d/m/Y H:i" }}</strong>
+                    {% endif %}
+                {% else %}
+                    Đề thi chưa có lịch trình cụ thể
+                {% endif %}
+            </p>
+        </div>
+
+        <!-- Exam Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            
+            <!-- Basic Info -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                    Thông Tin Cơ Bản
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-slate-400">📝 Tên</p>
+                        <p class="font-bold text-white">{{ exam.title }}</p>
+                    </div>
+                    {% if exam.description %}
+                        <div>
+                            <p class="text-slate-400">💬 Mô Tả</p>
+                            <p class="font-bold text-white">{{ exam.description }}</p>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <p class="text-slate-400">🎯 Mức Độ</p>
+                        <p class="font-bold text-white">
+                            {% if exam.difficulty_level == 'easy' %}
+                                ⭐ Dễ
+                            {% elif exam.difficulty_level == 'medium' %}
+                                ⭐⭐ Trung Bình
+                            {% else %}
+                                ⭐⭐⭐ Khó
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Time Settings -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-hourglass text-amber-400"></i>
+                    Hạn Chế Thời Gian
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-slate-400">⏱️ Thời Gian Làm Bài</p>
+                        <p class="font-bold text-white">{{ exam.duration }} phút</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">🔔 Cảnh Báo Còn Lại</p>
+                        <p class="font-bold text-white">{{ exam.time_warning_minutes }} phút</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">⏳ Hiển Thị Bộ Đếm</p>
+                        <p class="font-bold text-white">
+                            {% if exam.show_timer %}
+                                ✅ Có
+                            {% else %}
+                                ❌ Không
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attempt Settings -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-repeat text-green-400"></i>
+                    Số Lần Làm Bài
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-slate-400">🔄 Số Lần Tối Đa</p>
+                        <p class="font-bold text-white">
+                            {% if exam.max_attempts == 0 %}
+                                Vô Hạn
+                            {% else %}
+                                {{ exam.max_attempts }} lần
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">👁️ Xem Lại Bài Làm</p>
+                        <p class="font-bold text-white">
+                            {% if exam.allow_review %}
+                                ✅ Được Phép
+                            {% else %}
+                                ❌ Không Được Phép
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scoring Settings -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-star text-yellow-400"></i>
+                    Cài Đặt Chấm Điểm
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-slate-400">✅ Phần Trăm Đạt Yêu Cầu</p>
+                        <p class="font-bold text-white">{{ exam.passing_percentage }}%</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">📊 Hiển Thị Điểm</p>
+                        <p class="font-bold text-white">
+                            {% if exam.show_score %}
+                                ✅ Có
+                            {% else %}
+                                ❌ Không
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">📖 Hiển Thị Đáp Án Đúng</p>
+                        <p class="font-bold text-white">
+                            {% if exam.show_correct_answers %}
+                                ✅ Có
+                            {% else %}
+                                ❌ Không
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Randomization & Security -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-shield text-red-400"></i>
+                    Xáo Trộn & Bảo Mật
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-slate-400">❓ Xáo Trộn Câu Hỏi</p>
+                        <p class="font-bold text-white">
+                            {% if exam.randomize_questions %}
+                                ✅ Có
+                            {% else %}
+                                ❌ Không
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-slate-400">Ⓐ Xáo Trộn Đáp Án</p>
+                        <p class="font-bold text-white">
+                            {% if exam.randomize_options %}
+                                ✅ Có
+                            {% else %}
+                                ❌ Không
+                            {% endif %}
+                        </p>
+                    </div>
+                    <p class="text-yellow-300 text-xs mt-3 flex items-start gap-1">
+                        <i class="fas fa-lightbulb mt-1"></i>
+                        Xáo trộn giúp chống gian lận và đảm bảo tính công bằng
+                    </p>
+                </div>
+            </div>
+
+            <!-- Questions -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-question-circle text-purple-400"></i>
+                    Câu Hỏi
+                </h3>
+                <div class="space-y-3 text-sm">
+                    <div>
+                        <p class="text-slate-400">📝 Tổng Câu Hỏi</p>
+                        <p class="font-bold text-white text-lg">{{ total_questions }} câu</p>
+                    </div>
+                    {% if total_questions == 0 %}
+                        <p class="text-red-300 flex items-center gap-2">
+                            <i class="fas fa-warning"></i>
+                            ⚠️ Chưa có câu hỏi! Hãy thêm câu hỏi trước khi mở.
+                        </p>
+                    {% else %}
+                        <p class="text-green-300 flex items-center gap-2">
+                            <i class="fas fa-check"></i>
+                            ✅ Sẵn sàng
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Access Control -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-lg">
+                <h3 class="text-base font-bold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-lock text-cyan-400"></i>
+                    Kiểm Soát Truy Cập
+                </h3>
+                <div class="space-y-3 text-sm">
+                    {% if exam.classroom %}
+                        <div>
+                            <p class="text-slate-400">🎓 Chỉ Dành Cho Lớp</p>
+                            <p class="font-bold text-white">{{ exam.classroom.name }}</p>
+                        </div>
+                    {% else %}
+                        <div>
+                            <p class="text-slate-400">🌍 Công Khai</p>
+                            <p class="font-bold text-white">Tất cả học sinh</p>
+                        </div>
+                    {% endif %}
+                    
+                    <div>
+                        <p class="text-slate-400">👥 Trạng Thái</p>
+                        <p class="font-bold text-white">
+                            {% if exam.is_public %}
+                                ✅ Công Khai
+                            {% else %}
+                                🔒 Riêng Tư
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary & Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Summary Card -->
+            <div class="bg-indigo-950/30 border border-indigo-800/50 rounded-xl p-6">
+                <h3 class="text-base font-bold text-indigo-300 mb-4 flex items-center gap-2">
+                    <i class="fas fa-clipboard-list"></i>
+                    Tóm Tắt
+                </h3>
+                <ul class="space-y-2 text-sm text-indigo-200">
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-400 mt-1"></i>
+                        <span><strong>{{ exam.duration }}</strong> phút mỗi lần làm</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-400 mt-1"></i>
+                        <span>Tối đa <strong>{{ exam.max_attempts|default:'vô hạn' }}</strong> lần làm</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-400 mt-1"></i>
+                        <span>Cần <strong>{{ exam.passing_percentage }}%</strong> để đạt</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-check text-green-400 mt-1"></i>
+                        <span><strong>{{ total_questions }}</strong> câu hỏi</span>
+                    </li>
+                    {% if exam.randomize_questions or exam.randomize_options %}
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-green-400 mt-1"></i>
+                            <span>Bảo mật cao với xáo trộn</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <!-- Recommendations -->
+            <div class="bg-yellow-950/30 border border-yellow-800/50 rounded-xl p-6">
+                <h3 class="text-base font-bold text-yellow-300 mb-4 flex items-center gap-2">
+                    <i class="fas fa-star"></i>
+                    Gợi Ý
+                </h3>
+                <ul class="space-y-2 text-sm text-yellow-200">
+                    {% if total_questions == 0 %}
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-warning text-red-400 mt-1"></i>
+                            <span>Thêm ít nhất <strong>5-10 câu hỏi</strong></span>
+                        </li>
+                    {% endif %}
+                    {% if exam.duration < 30 %}
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-info-circle text-blue-400 mt-1"></i>
+                            <span>Cân nhắc tăng thời gian nếu có nhiều câu hỏi</span>
+                        </li>
+                    {% endif %}
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-lightbulb text-amber-400 mt-1"></i>
+                        <span>Bật xáo trộn để chống gian lận</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fas fa-lightbulb text-amber-400 mt-1"></i>
+                        <span>Đặt deadline hợp lý (2-7 ngày)</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="mt-10 flex gap-4 flex-wrap">
+            <a href="{% url 'edit_exam' exam.id %}" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-edit"></i>
+                Chỉnh Sửa Cài Đặt
+            </a>
+            <a href="{% url 'edit_exam_questions' exam.id %}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition flex items-center justify-center gap-2 shadow-lg">
+                <i class="fas fa-question-circle"></i>
+                Quản Lý Câu Hỏi
+            </a>
+            <a href="{% url 'teacher_exams' %}" class="px-6 bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition">
+                Quay Lại
+            </a>
+        </div>
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if is_edit %}Chỉnh sửa{% else %}Tạo{% endif %} Đề Thi - Quiz App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased py-10 px-4">
+
+    <div class="max-w-4xl mx-auto">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-10">
+            <div>
+                <h1 class="text-sm font-black text-white tracking-wide flex items-center gap-2">
+                    <i class="fas fa-{{ page_icon }} text-indigo-400 text-base"></i>
+                    {{ page_title }}
+                </h1>
+                <p class="text-xs text-slate-400 mt-0.5">
+                    {% if is_edit %}
+                    Cập nhật các cài đặt và hạn chế của đề thi
+                    {% else %}
+                    Tạo một đề thi mới với tất cả các hạn chế cần thiết
+                    {% endif %}
+                </p>
+            </div>
+            <a href="{% url 'teacher_exams' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-[11px] font-bold rounded-xl border border-slate-700/50 hover:border-slate-600 transition shadow-sm flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i>
+                Quay lại
+            </a>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-4 p-4 rounded-xl border {% if message.tags %}bg-{{ message.tags }}-950/40 border-{{ message.tags }}-800/60 text-{{ message.tags }}-400{% else %}bg-slate-900 border-slate-800{% endif %} text-xs">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="space-y-6">
+            {% csrf_token %}
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 shadow-lg space-y-4">
+                <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                    <i class="fas fa-info-circle text-blue-400"></i>
+                    Thông Tin Cơ Bản
+                </h2>
+
+                <div>
+                    <label for="id_title" class="block text-xs font-bold text-slate-300 mb-2">
+                        {{ form.title.label }} <span class="text-rose-500">*</span>
+                    </label>
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                        <p class="text-rose-400 text-xs mt-1.5"><i class="fas fa-circle-exclamation mr-1"></i>{{ form.title.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="id_description" class="block text-xs font-bold text-slate-300 mb-2">
+                        {{ form.description.label }}
+                    </label>
+                    {{ form.description }}
+                    <p class="text-[11px] text-slate-500 mt-1.5"><i class="fas fa-lightbulb mr-1"></i>Gợi ý hoặc hướng dẫn hiển thị cho học sinh trước khi bấm bắt đầu.</p>
+                </div>
+
+                <div>
+                    <label for="id_classroom" class="block text-xs font-bold text-slate-300 mb-2">
+                        {{ form.classroom.label }}
+                    </label>
+                    {{ form.classroom }}
+                    <p class="text-[11px] text-slate-500 mt-1.5"><i class="fas fa-circle-info mr-1"></i>Nếu bỏ trống, đề thi sẽ ở trạng thái công khai cho tất cả học sinh hệ thống.</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 shadow-lg space-y-4">
+                <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                    <i class="fas fa-hourglass-end text-amber-400"></i>
+                    Hạn Chế Thời Gian
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_duration" class="block text-xs font-bold text-slate-300 mb-2">
+                            {{ form.duration.label }} <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.duration }}
+                        <p class="text-[11px] text-slate-500 mt-1.5">{{ form.duration.help_text }}</p>
+                        {% if form.duration.errors %}
+                            <p class="text-rose-400 text-xs mt-1.5"><i class="fas fa-circle-exclamation mr-1"></i>{{ form.duration.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_time_warning_minutes" class="block text-xs font-bold text-slate-300 mb-2">
+                            {{ form.time_warning_minutes.label }}
+                        </label>
+                        {{ form.time_warning_minutes }}
+                        {% if form.time_warning_minutes.errors %}
+                            <p class="text-rose-400 text-xs mt-1.5"><i class="fas fa-circle-exclamation mr-1"></i>{{ form.time_warning_minutes.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <label class="flex items-center gap-3 p-3.5 bg-slate-950 border border-slate-800/60 rounded-xl hover:border-slate-700/60 transition cursor-pointer group">
+                    {{ form.show_timer }}
+                    <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200 transition">{{ form.show_timer.label }}</span>
+                </label>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_start_date" class="block text-xs font-bold text-slate-300 mb-2">
+                            {{ form.start_date.label }}
+                        </label>
+                        {{ form.start_date }}
+                        <p class="text-[11px] text-slate-500 mt-1.5">{{ form.start_date.help_text }}</p>
+                    </div>
+
+                    <div>
+                        <label for="id_end_date" class="block text-xs font-bold text-slate-300 mb-2">
+                            {{ form.end_date.label }}
+                        </label>
+                        {{ form.end_date }}
+                        <p class="text-[11px] text-slate-500 mt-1.5">{{ form.end_date.help_text }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 shadow-lg space-y-4">
+                <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                    <i class="fas fa-repeat text-teal-400"></i>
+                    Hạn Chế Số Lần Làm Bài
+                </h2>
+
+                <div>
+                    <label for="id_max_attempts" class="block text-xs font-bold text-slate-300 mb-2">
+                        {{ form.max_attempts.label }} <span class="text-rose-500">*</span>
+                    </label>
+                    <div class="max-w-xs">
+                        {{ form.max_attempts }}
+                    </div>
+                    <p class="text-[11px] text-slate-500 mt-1.5">{{ form.max_attempts.help_text }}</p>
+                    {% if form.max_attempts.errors %}
+                        <p class="text-rose-400 text-xs mt-1.5"><i class="fas fa-circle-exclamation mr-1"></i>{{ form.max_attempts.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <label class="flex items-center gap-3 p-3.5 bg-slate-950 border border-slate-800/60 rounded-xl hover:border-slate-700/60 transition cursor-pointer group">
+                    {{ form.allow_review }}
+                    <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200 transition">{{ form.allow_review.label }}</span>
+                </label>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 shadow-lg space-y-4">
+                <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                    <i class="fas fa-star text-amber-400"></i>
+                    Cài Đặt Câu Hỏi & Chấm Điểm
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_passing_percentage" class="block text-xs font-bold text-slate-300 mb-2">
+                            {{ form.passing_percentage.label }} <span class="text-rose-500">*</span>
+                        </label>
+                        {{ form.passing_percentage }}
+                        <p class="text-[11px] text-slate-500 mt-1.5">{{ form.passing_percentage.help_text }}</p>
+                        {% if form.passing_percentage.errors %}
+                            <p class="text-rose-400 text-xs mt-1.5"><i class="fas fa-circle-exclamation mr-1"></i>{{ form.passing_percentage.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="id_difficulty_level" class="block text-xs font-bold text-slate-300 mb-2">
+                            {{ form.difficulty_level.label }}
+                        </label>
+                        {{ form.difficulty_level }}
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label class="flex items-center gap-3 p-3.5 bg-slate-950 border border-slate-800/60 rounded-xl hover:border-slate-700/60 transition cursor-pointer group">
+                        {{ form.show_score }}
+                        <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200 transition">{{ form.show_score.label }}</span>
+                    </label>
+
+                    <label class="flex items-center gap-3 p-3.5 bg-slate-950 border border-slate-800/60 rounded-xl hover:border-slate-700/60 transition cursor-pointer group">
+                        {{ form.show_correct_answers }}
+                        <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200 transition">{{ form.show_correct_answers.label }}</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 shadow-lg space-y-3">
+                <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                    <i class="fas fa-shuffle text-fuchsia-400"></i>
+                    Xáo Trộn & Bảo Mật
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label class="flex items-center gap-3 p-3.5 bg-slate-950 border border-slate-800/60 rounded-xl hover:border-slate-700/60 transition cursor-pointer group">
+                        {{ form.randomize_questions }}
+                        <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200 transition">
+                            {{ form.randomize_questions.label }}
+                            <span class="text-[10px] text-fuchsia-400 ml-1 font-bold">(Chống gian lận)</span>
+                        </span>
+                    </label>
+
+                    <label class="flex items-center gap-3 p-3.5 bg-slate-950 border border-slate-800/60 rounded-xl hover:border-slate-700/60 transition cursor-pointer group">
+                        {{ form.randomize_options }}
+                        <span class="text-xs font-semibold text-slate-300 group-hover:text-slate-200 transition">
+                            {{ form.randomize_options.label }}
+                            <span class="text-[10px] text-fuchsia-400 ml-1 font-bold">(Chống gian lận)</span>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-6 shadow-lg">
+                <h2 class="text-xs font-black uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <i class="fas fa-lock text-rose-400"></i>
+                    Kiểm Soát Truy Cập
+                </h2>
+
+                <label class="flex items-start gap-3 p-4 bg-slate-950 border border-slate-800/60 rounded-xl hover:border-slate-700/60 transition cursor-pointer group">
+                    <div class="mt-0.5">
+                        {{ form.is_public }}
+                    </div>
+                    <div>
+                        <span class="text-xs font-bold text-slate-200 group-hover:text-white transition">{{ form.is_public.label }}</span>
+                        <p class="text-[11px] text-slate-500 mt-1">{{ form.is_public.help_text }}</p>
+                    </div>
+                </label>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="bg-rose-950/40 border border-rose-800 rounded-xl p-4">
+                    <p class="text-rose-400 font-bold text-xs flex items-center gap-2 mb-1">
+                        <i class="fas fa-exclamation-circle"></i>
+                        Lỗi hệ thống Form:
+                    </p>
+                    {% for error in form.non_field_errors %}
+                        <p class="text-rose-300 text-xs pl-5">• {{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="flex gap-4 pt-2">
+                <button type="submit" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3.5 rounded-xl transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-950/50 text-xs">
+                    <i class="fas fa-save"></i>
+                    {% if is_edit %}Cập Nhật{% else %}Tạo Mới{% endif %} Đề Thi
+                </button>
+                <a href="{% url 'teacher_exams' %}" class="px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 rounded-xl border border-slate-700/40 text-xs transition flex items-center">
+                    Hủy bỏ
+                </a>
+            </div>
+        </form>
+
+        <div class="mt-8 bg-blue-950/20 border border-blue-900/40 rounded-2xl p-4">
+            <p class="text-blue-400 text-xs flex items-start gap-2.5 leading-relaxed">
+                <i class="fas fa-lightbulb mt-0.5 text-blue-400 text-sm flex-shrink-0"></i>
+                <span>
+                    <strong>💡 Gợi ý quy trình:</strong> Sau khi tiến hành lưu cấu hình đề thi, hệ thống sẽ tự động điều hướng bạn đến không gian <strong>Quản Lý Câu Hỏi</strong>. Tại đó, bạn có thể thiết lập ngân hàng câu hỏi và đáp án chi tiết.
+                </span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Định dạng các ô nhập liệu dạng Text, Number, DateTime, Textarea và Dropdown Select
+            const textFields = document.querySelectorAll('input[type="text"], input[type="number"], input[type="datetime-local"], textarea, select');
+            textFields.forEach(field => {
+                field.classList.add(
+                    'w-full', 'bg-slate-950', 'border', 'border-slate-800', 
+                    'rounded-xl', 'px-4', 'py-3', 'text-xs', 'text-slate-100', 
+                    'placeholder-slate-600', 'focus:outline-none', 'focus:border-indigo-500', 
+                    'focus:ring-1', 'focus:ring-indigo-500', 'transition', 'duration-150'
+                );
+            });
+
+            // Định dạng riêng cho các ô Checkbox (Đánh dấu tích tuyển)
+            const checkFields = document.querySelectorAll('input[type="checkbox"]');
+            checkFields.forEach(field => {
+                field.classList.add(
+                    'w-4', 'h-4', 'rounded', 'text-indigo-600', 'bg-slate-950', 
+                    'border-slate-800', 'focus:ring-indigo-500', 'focus:ring-offset-slate-900'
+                );
+            });
+        });
+    </script>
+
+</body>
+</html>
