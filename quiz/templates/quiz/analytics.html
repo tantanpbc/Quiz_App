@@ -26,7 +26,6 @@
 
     <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
         
-        <!-- Exam Selector -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
             <form method="GET" class="flex gap-4">
                 <select name="exam_id" onchange="this.form.submit()" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-slate-300 focus:outline-none focus:border-indigo-500">
@@ -40,7 +39,6 @@
             </form>
         </div>
 
-        <!-- Key Metrics -->
         <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
                 <div>
@@ -75,16 +73,13 @@
             </div>
         </section>
 
-        <!-- Charts Section -->
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
-            <!-- Score Distribution Chart -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                 <h2 class="text-lg font-bold text-white mb-6">📊 Phân bố điểm</h2>
-                <canvas id="scoreChart"></canvas>
+                <canvas id="scoreChart" data-scores="{{ score_data|safe }}"></canvas>
             </div>
 
-            <!-- Top Performers -->
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
                 <h2 class="text-lg font-bold text-white mb-6">🏆 Top 5 học sinh xuất sắc</h2>
                 <div class="space-y-3">
@@ -106,7 +101,6 @@
             </div>
         </div>
 
-        <!-- Question Difficulty Analysis -->
         {% if selected_exam and question_stats %}
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
             <h2 class="text-lg font-bold text-white mb-6">❓ Phân tích độ khó từng câu hỏi</h2>
@@ -132,7 +126,6 @@
         </div>
         {% endif %}
 
-        <!-- Recent Submissions -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
             <h2 class="text-lg font-bold text-white mb-6">📝 Bài nộp gần đây</h2>
             <div class="overflow-x-auto">
@@ -168,64 +161,69 @@
     </main>
 
     <script>
-        // Score Distribution Chart
-        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
-        const scoreChart = new Chart(scoreCtx, {
-            type: 'bar',
-            data: {
-                labels: ['0-2', '2-4', '4-6', '6-8', '8-10'],
-                datasets: [{
-                    label: 'Số lượng học sinh',
-                    data: {{ score_data|safe }},
-                    backgroundColor: [
-                        'rgba(239, 68, 68, 0.5)',
-                        'rgba(249, 115, 22, 0.5)',
-                        'rgba(234, 179, 8, 0.5)',
-                        'rgba(59, 130, 246, 0.5)',
-                        'rgba(34, 197, 94, 0.5)',
-                    ],
-                    borderColor: [
-                        'rgba(239, 68, 68, 1)',
-                        'rgba(249, 115, 22, 1)',
-                        'rgba(234, 179, 8, 1)',
-                        'rgba(59, 130, 246, 1)',
-                        'rgba(34, 197, 94, 1)',
-                    ],
-                    borderWidth: 2,
-                    borderRadius: 8,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+        // Xử lý vẽ biểu đồ một cách an toàn bằng JSON dữ liệu sạch từ attribute HTML
+        const canvasEl = document.getElementById('scoreChart');
+        if (canvasEl) {
+            const scoreData = JSON.parse(canvasEl.getAttribute('data-scores') || "[]");
+
+            const scoreChart = new Chart(canvasEl, {
+                type: 'bar',
+                data: {
+                    labels: ['0-2', '2-4', '4-6', '6-8', '8-10'],
+                    datasets: [{
+                        label: 'Số lượng học sinh',
+                        data: scoreData,
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.5)',
+                            'rgba(249, 115, 22, 0.5)',
+                            'rgba(234, 179, 8, 0.5)',
+                            'rgba(59, 130, 246, 0.5)',
+                            'rgba(34, 197, 94, 0.5)',
+                        ],
+                        borderColor: [
+                            'rgba(239, 68, 68, 1)',
+                            'rgba(249, 115, 22, 1)',
+                            'rgba(234, 179, 8, 1)',
+                            'rgba(59, 130, 246, 1)',
+                            'rgba(34, 197, 94, 1)',
+                        ],
+                        borderWidth: 2,
+                        borderRadius: 8,
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#94a3b8'
-                        },
-                        grid: {
-                            color: '#334155',
-                            drawBorder: false
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            display: false
                         }
                     },
-                    x: {
-                        ticks: {
-                            color: '#94a3b8'
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#94a3b8',
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: '#334155',
+                                drawBorder: false
+                            }
                         },
-                        grid: {
-                            display: false,
-                            drawBorder: false
+                        x: {
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            grid: {
+                                display: false,
+                                drawBorder: false
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
     </script>
 
 </body>

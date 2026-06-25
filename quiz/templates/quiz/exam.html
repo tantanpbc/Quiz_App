@@ -28,8 +28,19 @@
     </header>
 
     <main class="max-w-4xl mx-auto px-4 mt-8">
+        {% if remaining_attempts != 'Vô hạn' %}
+        <div class="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-200 text-sm">
+            ⚠️ Số lần làm bài còn lại: <strong>{{ remaining_attempts }}</strong>
+        </div>
+        {% endif %}
+        
         <form id="quiz-form" method="POST" action="{% url 'submit_quiz' exam.id %}" class="space-y-6">
             {% csrf_token %}
+            
+            <!-- Feature 4: Store randomization seed for later review -->
+            {% if randomization_seed %}
+                <input type="hidden" name="randomization_seed" value="{{ randomization_seed }}">
+            {% endif %}
             
             {% for q in questions %}
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-sm hover:border-slate-700/60 transition duration-200">

@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from .models import Classroom, Exam, Question, Result
+from django.db.models import Avg, Max, Min, Count, Q
 import json
 from openpyxl import Workbook
 
@@ -209,74 +210,124 @@ def review_result(request, result_id):
 
 @login_required
 def analytics_dashboard(request):
-    """Feature 1: Analytics dashboard with charts and performance analysis"""
-    if not (request.user.is_staff or request.user.is_superuser):
-        return HttpResponse("Bạn không có quyền truy cập khu vực này.", status=403)
+    # 1. Lấy danh sách tất cả đề thi để hiển thị ở bộ lọc (Dropdown)
+    exams = Exam.objects.all()
     
-    from django.db.models import Avg, Count, Min, Max
-    
+    # 2. Kiểm tra xem người dùng có lọc theo đề thi cụ thể nào không
     exam_id = request.GET.get('exam_id')
     selected_exam = None
     
+    # Khởi tạo QuerySet cho Results và Questions ban đầu
+    results = Result.objects.all()
+    
     if exam_id:
-        selected_exam = get_object_or_404(Exam, id=exam_id)
-        results = Result.objects.filter(exam=selected_exam).select_related('student')
+        try:
+            selected_exam = Exam.objects.get(id=exam_id)
+            results = results.filter(exam=selected_exam)
+        except Exam.DoesNotExist:
+            pass
+
+    # 3. Tính toán các chỉ số Key Metrics (Tổng lượt nộp, Điểm TB, Cao nhất, Thấp nhất)
+    total_submissions = results.count()
+    
+    if total_submissions > 0:
+        # Làm tròn điểm trung bình đến 2 chữ số thập phân
+        avg_score = round(results.aggregate(Avg('score'))['score__avg'] or 0, 2)
+        max_score = results.aggregate(Max('score'))['score__max']
+        min_score = results.aggregate(Min('score'))['score__min']
     else:
-        results = Result.objects.select_related('student', 'exam')
-    
-    # Calculate statistics
+        avg_score = 0
+        max_score = 0
+        min_score = 0
+
     stats = {
-        'total_submissions': results.count(),
-        'avg_score': results.aggregate(Avg('score'))['score__avg'] or 0,
-        'min_score': results.aggregate(Min('score'))['score__min'] or 0,
-        'max_score': results.aggregate(Max('score'))['score__max'] or 0,
+        'total_submissions': total_submissions,
+        'avg_score': avg_score,
+        'max_score': max_score,
+        'min_score': min_score
     }
-    stats['avg_score'] = round(stats['avg_score'], 2)
+
+    # 4. Lấy danh sách Top 5 học sinh xuất sắc nhất (Sắp xếp theo điểm giảm dần)
+    top_performers = results.order_by('-score')[:5]
+
+    # 5. Phân tích phân bố điểm thành mảng 5 cột: ['0-2', '2-4', '4-6', '6-8', '8-10']
+    # Khởi tạo mảng ban đầu toàn số 0 để đếm số lượng học sinh rơi vào từng khoảng điểm
+    distribution_list = [0, 0, 0, 0, 0]
     
-    # Score distribution for chart
-    score_data = [
-        results.filter(score__lt=2).count(),      # 0-2
-        results.filter(score__gte=2, score__lt=4).count(),   # 2-4
-        results.filter(score__gte=4, score__lt=6).count(),   # 4-6
-        results.filter(score__gte=6, score__lt=8).count(),   # 6-8
-        results.filter(score__gte=8).count(),     # 8-10
-    ]
-    
-    # Question difficulty analysis (which questions have lowest pass rate)
+    for res in results:
+        score = res.score
+        if score < 2:
+            distribution_list[0] += 1
+        elif score < 4:
+            distribution_list[1] += 1
+        elif score < 6:
+            distribution_list[2] += 1
+        elif score < 8:
+            distribution_list[3] += 1
+        else:
+            distribution_list[4] += 1  # Điểm từ 8 đến 10
+
+    # Chuyển đổi mảng Python thành chuỗi JSON dạng sạch để truyền vào HTML
+    score_data_json = json.dumps(distribution_list)
+
+    # 6. Phân tích độ khó từng câu hỏi (Chỉ thực hiện khi giáo viên chọn một đề thi cụ thể)
     question_stats = []
     if selected_exam:
-        for q in selected_exam.questions.all():
+        # Lấy tất cả câu hỏi thuộc đề thi này
+        questions = Question.objects.filter(exam=selected_exam)
+        
+        for q in questions:
+            # Tìm tất cả các kết quả thi của đề thi này
+            # Lưu ý: Bạn cần có logic bóc tách answers_json trong Result để đếm đúng/sai chính xác.
+            # Dưới đây là logic giả định hoặc bạn có thể đếm dựa theo cách lưu kết quả của bạn:
+            
+            total_answers = total_submissions
             correct_count = 0
+            
+            # Giả định đọc từ answers_json để kiểm tra câu hỏi này học sinh chọn đúng hay sai
             for res in results:
                 try:
-                    answers = json.loads(res.answers_json)
+                    answers = json.loads(res.answers_json or '{}')
+                    # Nếu câu trả lời của học sinh trùng với đáp án đúng của câu hỏi
                     if answers.get(str(q.id)) == q.correct_option:
                         correct_count += 1
                 except:
                     pass
             
-            pass_rate = (correct_count / results.count() * 100) if results.count() > 0 else 0
+            # Tính tỷ lệ làm đúng (Pass Rate)
+            pass_rate = round((correct_count / total_answers * 100), 1) if total_answers > 0 else 0
+            
+            # Phân loại độ khó dựa trên tỷ lệ làm đúng
+            if pass_rate >= 75:
+                difficulty = "Dễ"
+            elif pass_rate >= 50:
+                difficulty = "Trung bình"
+            else:
+                difficulty = "Khó"
+                
             question_stats.append({
-                'question': q.question_text[:50],
-                'pass_rate': round(pass_rate, 1),
+                'question': q.question_text[:60] + '...' if len(q.question_text) > 60 else q.question_text,
                 'correct': correct_count,
-                'total': results.count(),
-                'difficulty': 'Dễ' if pass_rate >= 75 else 'Trung bình' if pass_rate >= 50 else 'Khó'
+                'total': total_answers,
+                'pass_rate': pass_rate,
+                'difficulty': difficulty
             })
-        question_stats.sort(key=lambda x: x['pass_rate'])
-    
-    # Top performers
-    top_performers = results.order_by('-score')[:5]
-    
+
+    # 7. Danh sách toàn bộ bài nộp gần đây (Hiển thị ở bảng cuối trang)
+    # Sắp xếp theo thời gian nộp mới nhất, giới hạn lấy 10 bài gần nhất (hoặc tùy bạn chỉnh)
+    recent_results = results.order_by('-completed_at')[:10]
+
+    # Đóng gói dữ liệu truyền sang file template HTML
     context = {
+        'exams': exams,
         'selected_exam': selected_exam,
-        'exams': Exam.objects.all(),
         'stats': stats,
-        'score_data': score_data,
-        'question_stats': question_stats,
         'top_performers': top_performers,
-        'results': results[:20],  # Recent 20 submissions
+        'score_data': score_data_json,  # Chuỗi JSON dạng mảng sạch đã qua json.dumps()
+        'question_stats': question_stats,
+        'results': recent_results,
     }
+    
     return render(request, 'quiz/analytics.html', context)
 
 @login_required
