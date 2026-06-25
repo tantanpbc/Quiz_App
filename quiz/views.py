@@ -3,10 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
-from .models import Classroom, Exam, Question, Result
+from .models import Classroom, Exam, Question, Result, QuizSession
 from django.db.models import Avg, Max, Min, Count, Q
 import json
 from openpyxl import Workbook
+from django.utils import timezone
+from datetime import timedelta
 
 @login_required
 def home(request):
@@ -16,12 +18,17 @@ def home(request):
     user_classrooms = request.user.classrooms.all()
     exams = Exam.objects.filter(classroom__in=user_classrooms).distinct()
     user_results = Result.objects.filter(student=request.user).select_related('exam')
-    completed_exam_ids = user_results.values_list('exam_id', flat=True)
+
+    attempt_counts = {}
+
+    for exam in exams:
+        count = Result.objects.filter(student=request.user,exam=exam).count()
+        attempt_counts[exam.id] = count
 
     context = {
         'exams': exams,
-        'completed_exam_ids': completed_exam_ids,
         'user_results': user_results,
+        'attempt_counts': attempt_counts,
     }
     return render(request, 'quiz/home.html', context)
 
@@ -60,6 +67,8 @@ def take_quiz(request, exam_id):
         return HttpResponse("Giáo viên không được tham gia làm bài thi.", status=403)
         
     exam = get_object_or_404(Exam, id=exam_id)
+
+    session, created = QuizSession.objects.get_or_create(student=request.user,exam=exam)
     
     if exam.classroom and not exam.classroom.students.filter(id=request.user.id).exists():
         return HttpResponse("Bạn không thuộc lớp học được quyền làm đề thi này.", status=403)
@@ -87,11 +96,18 @@ def take_quiz(request, exam_id):
         if exam.randomize_questions:
             random.shuffle(questions)
 
+    elapsed = timezone.now() - session.start_time
+
+    remaining = timedelta(minutes=exam.duration) - elapsed
+
+    remaining_seconds = max(0,int(remaining.total_seconds()))
+
     context = {
         'exam': exam,
         'questions': questions,
         'randomization_seed': randomization_seed,
         'remaining_attempts': exam.max_attempts - student_attempts if exam.max_attempts > 0 else 'Vô hạn',
+        'remaining_seconds': remaining_seconds,
     }
     return render(request, 'quiz/exam.html', context)
 
@@ -101,6 +117,26 @@ def submit_quiz(request, exam_id):
         return redirect('home')
         
     exam = get_object_or_404(Exam, id=exam_id)
+
+    try:
+        session = QuizSession.objects.get(
+            student=request.user,
+            exam=exam
+        )
+
+        elapsed = timezone.now() - session.start_time
+
+        if elapsed.total_seconds() > exam.duration * 60:
+
+            messages.error(
+                request,
+                "Đã hết thời gian làm bài."
+            )
+    except QuizSession.DoesNotExist:
+        return HttpResponse(
+        "Không tìm thấy phiên làm bài.",
+        status=400
+    )
     
     # Feature 3: Check retake limits on submission
     student_attempts = Result.objects.filter(student=request.user, exam=exam).count()
@@ -138,6 +174,11 @@ def submit_quiz(request, exam_id):
         attempt_number=attempt_number,
         randomization_seed=randomization_seed,
     )
+
+    session.submitted = True
+    session.save()
+
+    session.delete()
 
     messages.success(request, f"Nộp bài lần {attempt_number} thành công! Bạn đúng {correct_answers}/{total_questions} câu. Điểm số: {score}")
     return render(request, 'quiz/result.html', {'result': result})

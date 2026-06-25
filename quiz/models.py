@@ -85,3 +85,31 @@ class Result(models.Model):
 
     def __str__(self):
         return f"{self.student.username} - {self.exam.title} - {self.score} (Lần {self.attempt_number})"
+    
+class QuizSession(models.Model):
+    student = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE
+    )
+
+    exam = models.ForeignKey(
+        Exam,
+        on_delete=models.CASCADE
+    )
+
+    start_time = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    submitted = models.BooleanField(
+        default=False
+    )
+
+    class Meta:
+        unique_together = (
+            'student',
+            'exam'
+        )
+
+    def __str__(self):
+        return f"{self.student.username} - {self.exam.title}"
