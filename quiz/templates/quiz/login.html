@@ -3,76 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập hệ thống - Quiz System</title>
+    <title>Đăng nhập - Hệ thống thi trắc nghiệm</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-950 min-h-screen flex items-center justify-center font-sans antialiased text-slate-100 px-4">
+<body class="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 min-h-screen font-sans antialiased flex items-center justify-center py-12 px-4">
 
-    <div class="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+    <div class="w-full max-w-md">
         
-        <div class="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent"></div>
-
-        <div class="text-center mb-8">
-            <span class="text-4xl inline-block mb-3 animate-bounce">⚡</span>
-            <h1 class="text-xl font-black text-white tracking-wide uppercase">HỆ THỐNG TRẮC NGHIỆM</h1>
-            <p class="text-xs text-slate-400 mt-1">Vui lòng đăng nhập để tiếp tục học tập</p>
+        <!-- Logo/Header -->
+        <div class="text-center mb-10">
+            <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-600/10 border border-indigo-500/20 rounded-2xl mb-4">
+                <i class="fas fa-book-open text-3xl text-indigo-400"></i>
+            </div>
+            <h1 class="text-2xl font-black text-white tracking-wide">Quiz Master</h1>
+            <p class="text-xs text-slate-400 mt-2">Hệ thống thi trắc nghiệm trực tuyến</p>
         </div>
 
+        <!-- Messages -->
         {% if messages %}
-            <div class="mb-4 space-y-2">
-                {% for message in messages %}
-                    <div class="p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs rounded-xl font-medium flex items-center gap-2">
-                        <span>❌</span> {{ message }}
-                    </div>
-                {% endfor %}
-            </div>
+            {% for message in messages %}
+                <div class="mb-4 p-4 bg-red-950/30 border border-red-500/20 rounded-xl flex items-start gap-3">
+                    <i class="fas fa-exclamation-circle text-red-400 mt-0.5"></i>
+                    <p class="text-xs text-red-300">{{ message }}</p>
+                </div>
+            {% endfor %}
         {% endif %}
 
-        <form method="POST" action="{% url 'login' %}" class="space-y-5">
+        <!-- Login Form -->
+        <form method="POST" class="space-y-5 bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl">
             {% csrf_token %}
-            
+
+            <!-- Username Field -->
             <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Tài khoản</label>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fas fa-user text-indigo-400"></i>
+                    Tên đăng nhập
+                </label>
                 <div class="relative">
-                    <input type="text" name="username" required autocomplete="username"
-                           placeholder="Nhập tên đăng nhập..." 
-                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
-                </div>
-            </div>
-            
-            <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mật khẩu</label>
-                <div class="relative">
-                    <input type="password" name="password" required autocomplete="current-password"
-                           placeholder="••••••••" 
-                           class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition">
+                    <i class="fas fa-user-circle absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600 text-lg"></i>
+                    <input 
+                        type="text" 
+                        name="username" 
+                        required
+                        placeholder="Nhập tên đăng nhập"
+                        class="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700/40 text-white text-sm rounded-xl focus:outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-600 transition"
+                    >
                 </div>
             </div>
 
+            <!-- Password Field -->
             <div>
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Bạn là?</label>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <i class="fas fa-lock text-indigo-400"></i>
+                    Mật khẩu
+                </label>
                 <div class="relative">
-                    <select name="role" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition cursor-pointer appearance-none">
-                        <option value="student">👨‍🎓 Học sinh (Làm bài thi)</option>
-                        <option value="teacher">👩‍🏫 Giáo viên (Quản lý & Thống kê)</option>
-                    </select>
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                        <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
-                        </svg>
-                    </div>
+                    <i class="fas fa-lock absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-600 text-lg"></i>
+                    <input 
+                        type="password" 
+                        name="password" 
+                        required
+                        placeholder="Nhập mật khẩu"
+                        class="w-full pl-12 pr-4 py-3 bg-slate-800/50 border border-slate-700/40 text-white text-sm rounded-xl focus:outline-none focus:border-indigo-500/60 focus:ring-2 focus:ring-indigo-500/20 placeholder-slate-600 transition"
+                    >
                 </div>
             </div>
 
-            <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-bold text-sm rounded-xl transition shadow-lg shadow-indigo-950/50 mt-2 block text-center">
-                Đăng nhập hệ thống
+            <!-- Role Selection -->
+            <div>
+                <label class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                    <i class="fas fa-id-badge text-indigo-400"></i>
+                    Chọn vai trò
+                </label>
+                <div class="space-y-2">
+                    <!-- Student Role -->
+                    <label class="flex items-center gap-3 p-3 bg-slate-800/50 border border-slate-700/40 rounded-xl cursor-pointer group hover:border-blue-500/30 hover:bg-slate-800/70 transition">
+                        <input 
+                            type="radio" 
+                            name="role" 
+                            value="student"
+                            checked
+                            class="w-4 h-4 accent-blue-500 cursor-pointer"
+                        >
+                        <span class="flex items-center gap-2 flex-1">
+                            <i class="fas fa-graduation-cap text-blue-400 group-hover:scale-110 transition-transform"></i>
+                            <div>
+                                <div class="text-xs font-bold text-slate-200 group-hover:text-white">Học sinh</div>
+                                <div class="text-[10px] text-slate-500">Tham gia làm bài kiểm tra</div>
+                            </div>
+                        </span>
+                    </label>
+
+                    <!-- Teacher Role -->
+                    <label class="flex items-center gap-3 p-3 bg-slate-800/50 border border-slate-700/40 rounded-xl cursor-pointer group hover:border-amber-500/30 hover:bg-slate-800/70 transition">
+                        <input 
+                            type="radio" 
+                            name="role" 
+                            value="teacher"
+                            class="w-4 h-4 accent-amber-500 cursor-pointer"
+                        >
+                        <span class="flex items-center gap-2 flex-1">
+                            <i class="fas fa-chalkboard-user text-amber-400 group-hover:scale-110 transition-transform"></i>
+                            <div>
+                                <div class="text-xs font-bold text-slate-200 group-hover:text-white">Giáo viên</div>
+                                <div class="text-[10px] text-slate-500">Quản lý đề thi và kết quả</div>
+                            </div>
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button 
+                type="submit"
+                class="w-full py-3 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-950/40 flex items-center justify-center gap-2 group mt-6"
+            >
+                <i class="fas fa-sign-in-alt group-hover:scale-110 transition-transform"></i>
+                Đăng nhập
             </button>
+
+            <!-- Footer Info -->
+            <div class="pt-4 border-t border-slate-700/30">
+                <p class="text-[10px] text-slate-500 text-center flex items-center justify-center gap-1">
+                    <i class="fas fa-shield-alt text-slate-600"></i>
+                    Tài khoản của bạn được bảo vệ
+                </p>
+            </div>
         </form>
 
-        <div class="mt-6 pt-5 border-t border-slate-800/60 text-center">
-            <p class="text-[11px] text-slate-500">
-                💡 Mẹo kiểm thử: Sử dụng tài khoản <code class="text-indigo-400 font-mono">nguyenvana</code> mật khẩu <code class="text-indigo-400 font-mono">123456</code> để đăng nhập nhanh với vai trò Học sinh.
-            </p>
+        <!-- Demo Credentials -->
+        <div class="mt-8 p-4 bg-slate-800/30 border border-slate-700/40 rounded-2xl">
+            <div class="flex items-start gap-2 mb-3">
+                <i class="fas fa-lightbulb text-amber-400 mt-0.5"></i>
+                <p class="text-xs font-bold text-amber-300">Tài khoản demo</p>
+            </div>
+            <div class="space-y-2 text-[10px] text-slate-400">
+                <p><span class="text-slate-300 font-semibold">Học sinh:</span> nguyenvana / password123</p>
+                <p><span class="text-slate-300 font-semibold">Giáo viên:</span> admin / admin123</p>
+            </div>
         </div>
 
     </div>

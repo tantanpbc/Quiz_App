@@ -5,19 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hệ thống thi trắc nghiệm trực tuyến</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased py-10 px-4">
 
     <div class="max-w-4xl mx-auto">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-10">
             <div>
-                <h1 class="text-lg font-black text-white tracking-wide">👋 Xin chào, {{ request.user.username }}!</h1>
+                <h1 class="text-lg font-black text-white tracking-wide flex items-center gap-2">
+                    <i class="fas fa-hand-wave text-amber-400 text-xl"></i>
+                    Xin chào, {{ request.user.username }}!
+                </h1>
                 <p class="text-xs text-slate-400 mt-0.5">Chúc bạn hoàn thành bài kiểm tra với kết quả tốt nhất.</p>
             </div>
             <form method="POST" action="{% url 'logout' %}" class="inline-block">
                 {% csrf_token %}
-                <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 text-xs font-bold rounded-xl border border-slate-700/50 hover:border-rose-900/30 transition shadow-sm">
-                    Đăng xuất cửa sổ
+                <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 text-xs font-bold rounded-xl border border-slate-700/50 hover:border-rose-900/30 transition shadow-sm flex items-center gap-2">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Đăng xuất
                 </button>
             </form>
         </div>
@@ -27,63 +32,96 @@
             <div class="lg:col-span-2 space-y-4">
                 <div class="flex items-center gap-2 mb-2">
                     <span class="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
-                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Danh sách đề thi trắc nghiệm đang mở</h2>
+                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-clipboard-list text-indigo-400 text-sm"></i>
+                        Danh sách đề thi trắc nghiệm đang mở
+                    </h2>
                 </div>
 
                 {% if exams %}
                     {% for exam in exams %}
-                        <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-md flex flex-col gap-4">
+                        <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-md flex flex-col gap-4 hover:border-indigo-500/30 transition">
                             <div>
-                                <span class="inline-block text-[10px] font-extrabold px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-md uppercase tracking-wider border border-indigo-500/10 mb-2">Online Quiz</span>
+                                <span class="inline-block text-[10px] font-extrabold px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-md uppercase tracking-wider border border-indigo-500/10 mb-2 flex items-center gap-1 w-fit">
+                                    <i class="fas fa-book text-xs"></i>
+                                    Online Quiz
+                                </span>
                                 <h3 class="text-sm font-bold text-white leading-snug">{{ exam.title }}</h3>
                                 <div class="flex flex-wrap gap-4 text-[11px] text-slate-400 mt-2">
-                                    <span class="flex items-center gap-1">⏱ {{ exam.duration }} phút</span>
-                                    <span class="flex items-center gap-1">❓ 4 câu hỏi</span>
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fas fa-clock text-slate-500"></i>
+                                        {{ exam.duration }} phút
+                                    </span>
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fas fa-question-circle text-slate-500"></i>
+                                        4 câu hỏi
+                                    </span>
                                 </div>
                             </div>
 
                             {% if exam.id in completed_exam_ids %}
-                                <button disabled class="w-full py-3 bg-slate-800 text-slate-500 text-xs font-bold rounded-xl border border-slate-700/40 cursor-not-allowed text-center">
-                                    🔒 Bạn đã hoàn thành bài thi này
+                                <button disabled class="w-full py-3 bg-slate-800 text-slate-500 text-xs font-bold rounded-xl border border-slate-700/40 cursor-not-allowed text-center flex items-center justify-center gap-2">
+                                    <i class="fas fa-lock"></i>
+                                    Bạn đã hoàn thành bài thi này
                                 </button>
                             {% else %}
-                                <a href="{% url 'take_quiz' exam.id %}" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-950/40 text-center block">
-                                    📝 Vào làm bài thi
+                                <a href="{% url 'take_quiz' exam.id %}" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-indigo-950/40 text-center flex items-center justify-center gap-2 group">
+                                    <i class="fas fa-pen-to-square group-hover:scale-110 transition-transform"></i>
+                                    Vào làm bài thi
                                 </a>
                             {% endif %}
                         </div>
                     {% endfor %}
                 {% else %}
-                    <p class="text-xs text-slate-500 py-6 text-center bg-slate-900/40 border border-dashed border-slate-800/60 rounded-2xl">Hiện chưa có đề thi nào được phân phối cho lớp của bạn.</p>
+                    <div class="text-center py-12 bg-slate-900/40 border border-dashed border-slate-800/60 rounded-2xl">
+                        <i class="fas fa-inbox text-3xl text-slate-600 block mb-3"></i>
+                        <p class="text-xs text-slate-500">Hiện chưa có đề thi nào được phân phối cho lớp của bạn.</p>
+                    </div>
                 {% endif %}
             </div>
 
             <div class="space-y-4">
                 <div class="flex items-center gap-2 mb-2">
                     <span class="w-1.5 h-4 bg-emerald-500 rounded-full"></span>
-                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider">Lịch sử bài đã làm</h2>
+                    <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                        <i class="fas fa-history text-emerald-400 text-sm"></i>
+                        Lịch sử bài đã làm
+                    </h2>
                 </div>
 
                 {% if user_results %}
                     <div class="space-y-3">
                         {% for res in user_results %}
-                            <div class="bg-slate-900 border border-slate-800/50 rounded-2xl p-4 flex flex-col gap-3 shadow-sm">
+                            <div class="bg-slate-900 border border-slate-800/50 rounded-2xl p-4 flex flex-col gap-3 shadow-sm hover:border-emerald-500/30 transition">
                                 <div>
-                                    <h4 class="text-xs font-bold text-slate-200 line-clamp-1 mb-1">{{ res.exam.title }}</h4>
-                                    <p class="text-[10px] text-slate-500">Nộp ngày: {{ res.completed_at|date:"d/m/Y - H:i" }}</p>
+                                    <h4 class="text-xs font-bold text-slate-200 line-clamp-1 mb-1 flex items-start gap-2">
+                                        <i class="fas fa-file-lines text-slate-500 flex-shrink-0 mt-0.5"></i>
+                                        <span>{{ res.exam.title }}</span>
+                                    </h4>
+                                    <p class="text-[10px] text-slate-500 flex items-center gap-1.5 ml-5">
+                                        <i class="fas fa-calendar-check"></i>
+                                        {{ res.completed_at|date:"d/m/Y - H:i" }}
+                                    </p>
                                 </div>
                                 <div class="flex items-center justify-between border-t border-slate-800/50 pt-2">
-                                    <span class="text-xs font-black text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded-md">Điểm: {{ res.score }}</span>
+                                    <span class="text-xs font-black text-emerald-400 bg-emerald-500/5 border border-emerald-500/10 px-2 py-0.5 rounded-md flex items-center gap-1.5">
+                                        <i class="fas fa-star"></i>
+                                        Điểm: {{ res.score }}
+                                    </span>
                                     
-                                    <a href="{% url 'review_result' res.id %}" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 transition underline decoration-indigo-500/30 underline-offset-4">
-                                        Xem chi tiết 🔎
+                                    <a href="{% url 'review_result' res.id %}" class="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 transition flex items-center gap-1 group">
+                                        Xem chi tiết
+                                        <i class="fas fa-arrow-up-right group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
                                     </a>
                                 </div>
                             </div>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p class="text-xs text-slate-500 py-6 text-center bg-slate-900/40 border border-dashed border-slate-800/60 rounded-2xl">Bạn chưa thực hiện bài thi trắc nghiệm nào.</p>
+                    <div class="text-center py-8 bg-slate-900/40 border border-dashed border-slate-800/60 rounded-2xl">
+                        <i class="fas fa-inbox text-2xl text-slate-600 block mb-2"></i>
+                        <p class="text-xs text-slate-500">Bạn chưa thực hiện bài thi trắc nghiệm nào.</p>
+                    </div>
                 {% endif %}
             </div>
 

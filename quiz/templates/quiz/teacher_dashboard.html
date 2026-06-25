@@ -3,172 +3,228 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bảng điều khiển Giáo viên - Hệ thống Trắc nghiệm</title>
+    <title>Dashboard Giáo viên - Quản lý kết quả thi</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-950 min-h-screen font-sans antialiased text-slate-100">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased py-10 px-4">
 
-    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-50 shadow-md">
-        <div class="max-w-6xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <span class="text-2xl">⚡</span>
-                <div>
-                    <h1 class="text-base font-black text-white tracking-wide">TEACHER DASHBOARD</h1>
-                    <p class="text-[10px] text-emerald-400 font-medium uppercase tracking-wider">Hệ thống quản lý & Thống kê điểm</p>
+    <div class="max-w-6xl mx-auto">
+        
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl mb-10">
+            <div>
+                <h1 class="text-lg font-black text-white tracking-wide flex items-center gap-2">
+                    <i class="fas fa-gauge-high text-purple-400 text-xl"></i>
+                    Bảng điều khiển giáo viên
+                </h1>
+                <p class="text-xs text-slate-400 mt-0.5">Quản lý đề thi, theo dõi kết quả học sinh</p>
+            </div>
+            <form method="POST" action="{% url 'logout' %}" class="inline-block">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 text-xs font-bold rounded-xl border border-slate-700/50 hover:border-rose-900/30 transition shadow-sm flex items-center gap-2">
+                    <i class="fas fa-sign-out-alt"></i>
+                    Đăng xuất
+                </button>
+            </form>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] text-slate-400 uppercase tracking-wider font-bold">Tổng số đề thi</p>
+                        <p class="text-2xl font-black text-white mt-2">{{ total_exams }}</p>
+                    </div>
+                    <div class="inline-flex items-center justify-center w-14 h-14 bg-blue-500/10 border border-blue-500/20 rounded-2xl">
+                        <i class="fas fa-clipboard-list text-xl text-blue-400"></i>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex items-center gap-4">
-                <div class="hidden sm:block text-right">
-                    <p class="text-xs text-slate-400 font-medium">Giáo viên viên đăng nhập:</p>
-                    <p class="text-sm font-bold text-emerald-400">{{ request.user.username }}</p>
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] text-slate-400 uppercase tracking-wider font-bold">Tổng số học sinh</p>
+                        <p class="text-2xl font-black text-white mt-2">{{ total_students }}</p>
+                    </div>
+                    <div class="inline-flex items-center justify-center w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl">
+                        <i class="fas fa-users text-xl text-emerald-400"></i>
+                    </div>
                 </div>
-                
-                <form method="POST" action="{% url 'logout' %}" class="inline-block">
-                    {% csrf_token %}
-                    <button type="submit" class="px-3 py-1.5 bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-400 rounded-xl text-xs font-bold border border-slate-700/50 transition">
-                        Đăng xuất
-                    </button>
-                </form>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 shadow-md">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] text-slate-400 uppercase tracking-wider font-bold">Tổng bài nộp</p>
+                        <p class="text-2xl font-black text-white mt-2">{{ total_results }}</p>
+                    </div>
+                    <div class="inline-flex items-center justify-center w-14 h-14 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                        <i class="fas fa-check-circle text-xl text-amber-400"></i>
+                    </div>
+                </div>
             </div>
         </div>
-    </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        
-        <section class="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-sm">
-                <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Tổng số đề thi</p>
-                    <h3 class="text-2xl font-black text-white mt-1 font-mono">{{ total_exams }}</h3>
-                </div>
-                <span class="text-3xl bg-indigo-500/10 p-3 rounded-xl text-indigo-400 border border-indigo-500/10">📄</span>
-            </div>
-
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-sm">
-                <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Tổng số học sinh</p>
-                    <h3 class="text-2xl font-black text-white mt-1 font-mono">{{ total_students }}</h3>
-                </div>
-                <span class="text-3xl bg-emerald-500/10 p-3 rounded-xl text-emerald-400 border border-emerald-500/10">👥</span>
-            </div>
-
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between shadow-sm">
-                <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Lượt nộp bài thi</p>
-                    <h3 class="text-2xl font-black text-white mt-1 font-mono">{{ total_results }}</h3>
-                </div>
-                <span class="text-3xl bg-amber-500/10 p-3 rounded-xl text-amber-400 border border-amber-500/10">📊</span>
-            </div>
-        </section>
-
-        <section class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/40 border border-slate-800 p-4 rounded-2xl">
-            <p class="text-xs text-slate-400">
-                💡 Để tạo thêm đề thi, câu hỏi trắc nghiệm mới hoặc tạo thêm lớp học, hãy sử dụng trang quản trị.
+        <section class="flex flex-wrap items-center justify-between gap-4 bg-slate-900/40 border border-slate-800 p-4 rounded-2xl mb-10">
+            <p class="text-xs text-slate-400 flex items-center gap-2">
+                <i class="fas fa-lightbulb text-amber-400"></i>
+                Để tạo thêm đề thi, câu hỏi trắc nghiệm mới hoặc tạo thêm lớp học, hãy sử dụng trang quản trị.
             </p>
             <div class="flex gap-3">
-                <a href="{% url 'analytics_dashboard' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95">
-                    📊 Analytics Dashboard
+                <a href="{% url 'analytics_dashboard' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-2">
+                    <i class="fas fa-chart-bar"></i>
+                    Analytics Dashboard
                 </a>
-                <a href="/admin/" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95">
-                    ⚙️ Đi tới Trang Quản Trị (Admin)
+                <a href="/admin/" target="_blank" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl shadow-md transition transform active:scale-95 flex items-center gap-2">
+                    <i class="fas fa-gears"></i>
+                    Trang Quản Trị
                 </a>
             </div>
         </section>
 
-        <section class="space-y-6">
-            <div class="border-b border-slate-800 pb-3">
-                <h2 class="text-lg font-black text-white flex items-center gap-2.5">
-                    <span class="w-1.5 h-5 bg-indigo-500 rounded-full inline-block"></span>
-                    Thống kê kết quả theo từng bộ đề thi
+        <div class="space-y-4">
+            <div class="flex items-center gap-2 mb-4">
+                <span class="w-1.5 h-4 bg-indigo-500 rounded-full"></span>
+                <h2 class="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fas fa-list-check text-indigo-400 text-sm"></i>
+                    Danh sách đề thi
                 </h2>
             </div>
 
-            <div class="space-y-8">
+            {% if exams_with_results %}
                 {% for exam in exams_with_results %}
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
+                    <div class="bg-slate-900 border border-slate-800/80 rounded-2xl overflow-hidden shadow-md hover:border-indigo-500/30 transition">
                         
-                        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800/60 pb-4 gap-4">
-                            <div>
-                                <h4 class="text-base font-bold text-white flex flex-wrap items-center gap-2">
-                                    📄 {{ exam.title }}
-                                    {% if exam.classroom %}
-                                        <span class="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-md font-bold">
-                                            🏫 Lớp: {{ exam.classroom.name }}
-                                        </span>
-                                    {% else %}
-                                        <span class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-md font-medium">
-                                            🌐 Công khai (Tất cả)
-                                        </span>
-                                    {% endif %}
-                                </h4>
-                                <p class="text-xs text-slate-500 mt-1">⏳ Thời gian: {{ exam.duration }} phút | ❓ Số câu hỏi: {{ exam.questions.count }} câu</p>
+                        <div class="p-6 border-b border-slate-800/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="inline-block text-[10px] font-extrabold px-2.5 py-0.5 bg-indigo-500/10 text-indigo-400 rounded-md uppercase tracking-wider border border-indigo-500/10 flex items-center gap-1">
+                                        <i class="fas fa-book text-xs"></i>
+                                        Quiz
+                                    </span>
+                                </div>
+                                <h3 class="text-sm font-bold text-white mb-2">{{ exam.title }}</h3>
+                                <div class="flex flex-wrap gap-4 text-[11px] text-slate-400">
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fas fa-clock text-slate-500"></i>
+                                        {{ exam.duration }} phút
+                                    </span>
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fas fa-folder-open text-slate-500"></i>
+                                        {{ exam.classroom.name|default:"Không có lớp" }}
+                                    </span>
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fas fa-calendar text-slate-500"></i>
+                                        {{ exam.created_at|date:"d/m/Y" }}
+                                    </span>
+                                    <span class="flex items-center gap-1.5">
+                                        <i class="fas fa-file-download text-slate-500"></i>
+                                        {{ exam.ordered_results|length }} lần nộp
+                                    </span>
+                                </div>
                             </div>
-                            
-                            <div class="flex items-center gap-3 self-end sm:self-auto">
-                                <a href="{% url 'export_exam_excel' exam.id %}" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-md shadow-emerald-950/20">
-                                    📥 Xuất Excel
-                                </a>
-                                <span class="bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-1.5 rounded-xl font-bold font-mono">
-                                    {{ exam.ordered_results|length }} lượt nộp
-                                </span>
-                            </div>
+
+                            <a href="{% url 'export_exam_excel' exam.id %}" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-lg shadow-emerald-950/40 flex items-center gap-2 whitespace-nowrap">
+                                <i class="fas fa-download"></i>
+                                Xuất Excel
+                            </a>
                         </div>
 
-                        <div class="overflow-x-auto rounded-xl border border-slate-800/60">
-                            <table class="w-full text-left text-xs">
-                                <thead>
-                                    <tr class="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider font-mono">
-                                        <th class="py-3 px-4 w-16 text-center">Hạng</th>
-                                        <th class="py-3 px-6">Tài khoản học sinh</th>
-                                        <th class="py-3 px-4 text-center">Số câu đúng</th>
-                                        <th class="py-3 px-4 text-center">Thời gian nộp</th>
-                                        <th class="py-3 px-6 text-right w-28">Điểm số</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-800/40">
-                                    {% for res in exam.ordered_results %}
-                                        <tr class="hover:bg-slate-800/10 transition">
-                                            <td class="py-3.5 px-4 text-center font-bold font-mono text-slate-400">
-                                                {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% elif forloop.counter == 3 %}🥉{% else %}{{ forloop.counter }}{% endif %}
-                                            </td>
-                                            <td class="py-3.5 px-6 font-bold text-slate-200">
-                                                👤 {{ res.student.username }}
-                                            </td>
-                                            <td class="py-3.5 px-4 text-center text-slate-400 font-mono">
-                                                {{ res.correct_answers }} / {{ res.total_questions }}
-                                            </td>
-                                            <td class="py-3.5 px-4 text-center text-slate-500 font-mono text-[11px]">
-                                                {{ res.completed_at|date:"H:i - d/m/Y" }}
-                                            </td>
-                                            <td class="py-3.5 px-6 text-right font-black font-mono text-sm {% if res.score >= 5.0 %}text-emerald-400{% else %}text-rose-400{% endif %}">
-                                                {{ res.score }}
-                                            </td>
+                        {% if exam.ordered_results %}
+                            <div class="overflow-x-auto">
+                                <table class="w-full border-collapse">
+                                    <thead>
+                                        <tr class="border-b border-slate-800/50 bg-slate-800/30">
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fas fa-list-ol text-slate-600 text-sm"></i> Thứ tự
+                                                </div>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fas fa-user text-slate-600 text-sm"></i> Học sinh
+                                                </div>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fas fa-star text-slate-600 text-sm"></i> Điểm
+                                                </div>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fas fa-bars-progress text-slate-600 text-sm"></i> Tiến độ
+                                                </div>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fas fa-calendar-check text-slate-600 text-sm"></i> Thời gian
+                                                </div>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                <div class="flex items-center gap-1">
+                                                    <i class="fas fa-eye text-slate-600 text-sm"></i> Hành động
+                                                </div>
+                                            </th>
                                         </tr>
-                                    {% empty %}
-                                        <tr>
-                                            <td colspan="5" class="py-6 text-center text-slate-600 italic">
-                                                Chưa có lượt học sinh nào nộp bài thi cho đề này.
-                                            </td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                {% empty %}
-                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center text-slate-500 text-sm italic">
-                        Chưa có đề thi nào được tạo trên hệ thống để thống kê điểm.
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800/40">
+                                        {% for result in exam.ordered_results %}
+                                            <tr class="hover:bg-slate-800/40 transition">
+                                                <td class="px-6 py-3 text-xs font-bold text-slate-300">
+                                                    <span class="inline-flex items-center justify-center w-6 h-6 bg-slate-700/50 rounded-full">
+                                                        {{ forloop.counter }}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-3 text-xs font-semibold text-white">
+                                                    <div class="flex items-center gap-2">
+                                                        <i class="fas fa-user-circle text-slate-600 text-sm"></i>
+                                                        {{ result.student.username }}
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-3">
+                                                    <span class="inline-flex items-center gap-1 text-xs font-black px-2 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md">
+                                                        <i class="fas fa-star text-sm"></i>
+                                                        {{ result.score }}/10
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-3 text-xs text-slate-400">
+                                                    <span class="font-semibold">{{ result.correct_answers }}/{{ result.total_questions }}</span>
+                                                </td>
+                                                <td class="px-6 py-3 text-xs text-slate-500">
+                                                    <div class="flex items-center gap-1">
+                                                        <i class="fas fa-clock text-slate-600"></i>
+                                                        {{ result.completed_at|date:"d/m/Y H:i" }}
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-3">
+                                                    <a href="{% url 'review_result' result.id %}" class="inline-flex items-center gap-1 text-xs font-bold text-indigo-400 hover:text-indigo-300 transition">
+                                                        <i class="fas fa-eye text-sm"></i>
+                                                        Xem chi tiết
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="p-8 text-center">
+                                <i class="fas fa-inbox text-2xl text-slate-600 block mb-3"></i>
+                                <p class="text-xs text-slate-500">Chưa có bài nộp cho đề thi này.</p>
+                            </div>
+                        {% endif %}
                     </div>
                 {% endfor %}
-            </div>
-        </section>
+            {% else %}
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-12 text-center">
+                    <i class="fas fa-inbox text-3xl text-slate-600 block mb-4"></i>
+                    <p class="text-xs text-slate-500">Chưa có đề thi nào được tạo.</p>
+                </div>
+            {% endif %}
+        </div>
 
-    </main>
-
-    <footer class="max-w-6xl mx-auto px-4 py-8 border-t border-slate-900 text-center text-[11px] text-slate-600">
-        &copy; 2026 Quiz System Teacher Panel. Powered by Django & Tailwind CSS.
-    </footer>
+    </div>
 
 </body>
 </html>

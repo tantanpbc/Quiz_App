@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📊 Bảng phân tích - Hệ thống Trắc nghiệm</title>
+    <title>Bảng phân tích - Hệ thống Trắc nghiệm</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body class="bg-slate-950 min-h-screen font-sans antialiased text-slate-100">
@@ -12,14 +13,17 @@
     <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 sticky top-0 z-50 shadow-md">
         <div class="max-w-7xl mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <span class="text-2xl">📊</span>
+                <div class="inline-flex items-center justify-center w-10 h-10 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                    <i class="fas fa-chart-bar text-lg text-blue-400"></i>
+                </div>
                 <div>
                     <h1 class="text-base font-black text-white tracking-wide">ANALYTICS DASHBOARD</h1>
                     <p class="text-[10px] text-blue-400 font-medium uppercase tracking-wider">Phân tích kết quả & Hiệu suất</p>
                 </div>
             </div>
-            <a href="{% url 'teacher_dashboard' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition">
-                ← Quay lại Dashboard
+            <a href="{% url 'teacher_dashboard' %}" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition flex items-center gap-2">
+                <i class="fas fa-arrow-left"></i>
+                Quay lại Dashboard
             </a>
         </div>
     </header>
@@ -28,65 +32,83 @@
         
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
             <form method="GET" class="flex gap-4">
-                <select name="exam_id" onchange="this.form.submit()" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-2 text-slate-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">📋 Tất cả đề thi</option>
-                    {% for exam in exams %}
-                        <option value="{{ exam.id }}" {% if selected_exam.id == exam.id %}selected{% endif %}>
-                            {{ exam.title }}
+                <div class="flex-1 relative flex items-center gap-2">
+                    <i class="fas fa-filter text-slate-600 absolute left-3"></i>
+                    <select name="exam_id" onchange="this.form.submit()" class="flex-1 bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-2 text-slate-300 focus:outline-none focus:border-indigo-500">
+                        <option value="">
+                            <i class="fas fa-list"></i> Tất cả đề thi
                         </option>
-                    {% endfor %}
-                </select>
+                        {% for exam in exams %}
+                            <option value="{{ exam.id }}" {% if selected_exam.id == exam.id %}selected{% endif %}>
+                                {{ exam.title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
             </form>
         </div>
 
         <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Tổng lượt nộp</p>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-file-lines text-indigo-400"></i> Tổng lượt nộp
+                    </p>
                     <h3 class="text-3xl font-black text-white mt-1">{{ stats.total_submissions }}</h3>
                 </div>
-                <span class="text-3xl bg-indigo-500/10 p-3 rounded-xl text-indigo-400">📝</span>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Điểm trung bình</p>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-arrow-trend-up text-emerald-400"></i> Điểm trung bình
+                    </p>
                     <h3 class="text-3xl font-black text-white mt-1">{{ stats.avg_score }}/10</h3>
                 </div>
-                <span class="text-3xl bg-emerald-500/10 p-3 rounded-xl text-emerald-400">📈</span>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Điểm thấp nhất</p>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-arrow-trend-down text-rose-400"></i> Điểm thấp nhất
+                    </p>
                     <h3 class="text-3xl font-black text-white mt-1">{{ stats.min_score }}</h3>
                 </div>
-                <span class="text-3xl bg-rose-500/10 p-3 rounded-xl text-rose-400">📉</span>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
                 <div>
-                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Điểm cao nhất</p>
+                    <p class="text-xs font-medium text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fas fa-star text-amber-400"></i> Điểm cao nhất
+                    </p>
                     <h3 class="text-3xl font-black text-white mt-1">{{ stats.max_score }}</h3>
                 </div>
-                <span class="text-3xl bg-amber-500/10 p-3 rounded-xl text-amber-400">⭐</span>
             </div>
         </section>
 
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                <h2 class="text-lg font-bold text-white mb-6">📊 Phân bố điểm</h2>
+                <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <i class="fas fa-chart-column text-blue-400"></i>
+                    Phân bộ điểm
+                </h2>
                 <canvas id="scoreChart" data-scores="{{ score_data|safe }}"></canvas>
             </div>
 
             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-                <h2 class="text-lg font-bold text-white mb-6">🏆 Top 5 học sinh xuất sắc</h2>
+                <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                    <i class="fas fa-trophy text-amber-400"></i>
+                    Top 5 học sinh xuất sắc
+                </h2>
                 <div class="space-y-3">
                     {% for performer in top_performers %}
                         <div class="flex justify-between items-center p-4 bg-slate-950 rounded-xl border border-slate-800/50">
                             <div>
-                                <p class="text-sm font-bold text-slate-200">{{ performer.student.username }}</p>
+                                <p class="text-sm font-bold text-slate-200 flex items-center gap-2">
+                                    <i class="fas fa-user-check text-emerald-400"></i>
+                                    {{ performer.student.username }}
+                                </p>
                                 <p class="text-xs text-slate-500">{{ performer.exam.title }}</p>
                             </div>
                             <div class="text-right">
@@ -95,7 +117,10 @@
                             </div>
                         </div>
                     {% empty %}
-                        <p class="text-sm text-slate-500 py-6 text-center">Chưa có bài nộp nào</p>
+                        <div class="text-center py-8">
+                            <i class="fas fa-inbox text-2xl text-slate-600 block mb-2"></i>
+                            <p class="text-sm text-slate-500">Chưa có bài nộp nào</p>
+                        </div>
                     {% endfor %}
                 </div>
             </div>
@@ -103,13 +128,19 @@
 
         {% if selected_exam and question_stats %}
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 class="text-lg font-bold text-white mb-6">❓ Phân tích độ khó từng câu hỏi</h2>
+            <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-question text-purple-400"></i>
+                Phân tích độ khó từng câu hỏi
+            </h2>
             <div class="space-y-3">
                 {% for q in question_stats %}
                     <div class="flex justify-between items-center p-4 bg-slate-950 rounded-xl border border-slate-800/50">
                         <div class="flex-1">
                             <p class="text-sm font-bold text-slate-200">{{ q.question }}</p>
-                            <p class="text-xs text-slate-500 mt-1">{{ q.correct }}/{{ q.total }} học sinh làm đúng</p>
+                            <p class="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
+                                <i class="fas fa-check-circle text-emerald-400"></i>
+                                {{ q.correct }}/{{ q.total }} học sinh làm đúng
+                            </p>
                         </div>
                         <div class="flex items-center gap-4">
                             <div class="w-24 bg-slate-900 rounded-lg h-2 border border-slate-700">
@@ -117,7 +148,16 @@
                             </div>
                             <div class="text-right w-20">
                                 <p class="text-sm font-bold text-slate-200">{{ q.pass_rate }}%</p>
-                                <p class="text-xs text-slate-500">{{ q.difficulty }}</p>
+                                <p class="text-xs text-slate-500 flex items-center gap-1 justify-end">
+                                    {% if q.difficulty == "Dễ" %}
+                                        <i class="fas fa-face-smile text-emerald-400"></i>
+                                    {% elif q.difficulty == "Trung bình" %}
+                                        <i class="fas fa-face-neutral text-amber-400"></i>
+                                    {% else %}
+                                        <i class="fas fa-face-frown text-rose-400"></i>
+                                    {% endif %}
+                                    {{ q.difficulty }}
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -127,16 +167,29 @@
         {% endif %}
 
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
-            <h2 class="text-lg font-bold text-white mb-6">📝 Bài nộp gần đây</h2>
+            <h2 class="text-lg font-bold text-white mb-6 flex items-center gap-2">
+                <i class="fas fa-file-lines text-blue-400"></i>
+                Bài nộp gần đây
+            </h2>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
+                <table class="w-full text-left text-xs table-auto">
                     <thead>
                         <tr class="bg-slate-950 border-b border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
-                            <th class="py-3 px-4">Học sinh</th>
-                            <th class="py-3 px-4">Đề thi</th>
-                            <th class="py-3 px-4 text-center">Lần thứ</th>
-                            <th class="py-3 px-4 text-center">Điểm</th>
-                            <th class="py-3 px-4">Thời gian</th>
+                            <th class="py-3 px-4">
+                                <div class="flex items-center gap-1"><i class="fas fa-user text-sm"></i> Học sinh</div>
+                            </th>
+                            <th class="py-3 px-4">
+                                <div class="flex items-center gap-1"><i class="fas fa-book text-sm"></i> Đề thi</div>
+                            </th>
+                            <th class="py-3 px-4">
+                                <div class="flex items-center gap-1 justify-center"><i class="fas fa-repeat text-sm"></i> Lần thứ</div>
+                            </th>
+                            <th class="py-3 px-4">
+                                <div class="flex items-center gap-1 justify-center"><i class="fas fa-star text-sm"></i> Điểm</div>
+                            </th>
+                            <th class="py-3 px-4">
+                                <div class="flex items-center gap-1"><i class="fas fa-clock text-sm"></i> Thời gian</div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-800/40">
@@ -145,12 +198,22 @@
                                 <td class="py-3 px-4 font-bold text-slate-200">{{ res.student.username }}</td>
                                 <td class="py-3 px-4 text-slate-400">{{ res.exam.title }}</td>
                                 <td class="py-3 px-4 text-center text-slate-400">{{ res.attempt_number }}</td>
-                                <td class="py-3 px-4 text-center font-bold {% if res.score >= 5 %}text-emerald-400{% else %}text-rose-400{% endif %}">{{ res.score }}</td>
+                                <td class="py-3 px-4 text-center font-bold {% if res.score >= 5 %}text-emerald-400{% else %}text-rose-400{% endif %}">
+                                    {{ res.score }}
+                                    {% if res.score >= 5 %}
+                                        <i class="fas fa-check text-xs"></i>
+                                    {% else %}
+                                        <i class="fas fa-times text-xs"></i>
+                                    {% endif %}
+                                </td>
                                 <td class="py-3 px-4 text-slate-500 text-[11px]">{{ res.completed_at|date:"H:i - d/m/Y" }}</td>
                             </tr>
                         {% empty %}
                             <tr>
-                                <td colspan="5" class="py-6 text-center text-slate-600 italic">Không có bài nộp nào</td>
+                                <td colspan="5" class="py-6 text-center text-slate-600">
+                                    <i class="fas fa-inbox text-xl block mb-2"></i>
+                                    Không có bài nộp nào
+                                </td>
                             </tr>
                         {% endfor %}
                     </tbody>
@@ -161,7 +224,6 @@
     </main>
 
     <script>
-        // Xử lý vẽ biểu đồ một cách an toàn bằng JSON dữ liệu sạch từ attribute HTML
         const canvasEl = document.getElementById('scoreChart');
         if (canvasEl) {
             const scoreData = JSON.parse(canvasEl.getAttribute('data-scores') || "[]");
