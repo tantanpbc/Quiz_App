@@ -98,7 +98,7 @@ def submit_quiz(request, exam_id):
 
     score = round((correct_answers / total_questions) * 10, 2) if total_questions > 0 else 0
 
-    Result.objects.create(
+    result = Result.objects.create(
         student=request.user,
         exam=exam,
         correct_answers=correct_answers,

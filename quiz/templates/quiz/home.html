@@ -14,9 +14,12 @@
                 <h1 class="text-lg font-black text-white tracking-wide">👋 Xin chào, {{ request.user.username }}!</h1>
                 <p class="text-xs text-slate-400 mt-0.5">Chúc bạn hoàn thành bài kiểm tra với kết quả tốt nhất.</p>
             </div>
-            <a href="{% url 'logout' %}" class="px-4 py-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 text-xs font-bold rounded-xl border border-slate-700/50 hover:border-rose-900/30 transition shadow-sm">
-                Đăng xuất cửa sổ
-            </a>
+            <form method="POST" action="{% url 'logout' %}" class="inline-block">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 bg-slate-800 hover:bg-rose-950/40 hover:text-rose-400 text-xs font-bold rounded-xl border border-slate-700/50 hover:border-rose-900/30 transition shadow-sm">
+                    Đăng xuất cửa sổ
+                </button>
+            </form>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
